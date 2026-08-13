@@ -8,7 +8,8 @@ import { createClient } from "@supabase/supabase-js";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-const NEWS_SOURCES_DOMAINS = "moneycontrol,economictimes,business-standard,livemint";
+const NEWS_SOURCES_DOMAINS =
+  "moneycontrol.com,economictimes.indiatimes.com,business-standard.com,livemint.com";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 const supabase = createClient(
@@ -35,7 +36,7 @@ async function fetchArticles(query) {
   url.searchParams.set("country", "in");
   url.searchParams.set("language", "en");
   url.searchParams.set("category", "business");
-  url.searchParams.set("domain", NEWS_SOURCES_DOMAINS);
+  url.searchParams.set("domainurl", NEWS_SOURCES_DOMAINS);
 
   const res = await fetch(url);
   if (!res.ok) throw new Error(`NewsData.io error ${res.status}: ${await res.text()}`);
