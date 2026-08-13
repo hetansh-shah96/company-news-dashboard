@@ -32,22 +32,32 @@ function istDateString() {
 async function fetchArticles(query) {
   const url = new URL("https://newsdata.io/api/1/news");
   url.searchParams.set("apikey", requireEnv("NEWSDATA_API_KEY"));
-  url.searchParams.set("q", query);
+  // qInTitle restricts matches to articles whose title actually contains the
+  // company name, which is far more precise than a general keyword search.
+  url.searchParams.set("qInTitle", `"${query}"`);
   url.searchParams.set("country", "in");
   url.searchParams.set("language", "en");
-  url.searchParams.set("category", "business");
   url.searchParams.set("domainurl", NEWS_SOURCES_DOMAINS);
 
   const res = await fetch(url);
   if (!res.ok) throw new Error(`NewsData.io error ${res.status}: ${await res.text()}`);
   const data = await res.json();
-  return (data.results ?? []).slice(0, 6).map((a) => ({
-    title: a.title,
-    url: a.link,
-    source_name: a.source_id,
-    published_at: a.pubDate,
-    snippet: a.description ?? "",
-  }));
+
+  const seen = new Set();
+  const articles = [];
+  for (const a of data.results ?? []) {
+    if (seen.has(a.title)) continue;
+    seen.add(a.title);
+    articles.push({
+      title: a.title,
+      url: a.link,
+      source_name: a.source_id,
+      published_at: a.pubDate,
+      snippet: a.description ?? "",
+    });
+    if (articles.length >= 6) break;
+  }
+  return articles;
 }
 
 async function summarize(companyName, articles) {
