@@ -8,8 +8,6 @@ import { createClient } from "@supabase/supabase-js";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-const NEWS_SOURCES_DOMAINS =
-  "moneycontrol.com,economictimes.indiatimes.com,business-standard.com,livemint.com";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 const supabase = createClient(
@@ -32,13 +30,13 @@ function istDateString() {
 async function fetchArticles(companyName, query) {
   const url = new URL("https://newsdata.io/api/1/news");
   url.searchParams.set("apikey", requireEnv("NEWSDATA_API_KEY"));
-  // Broad match on title+content; NewsData.io's index is too sparse per
-  // domain to survive an exact-phrase qInTitle filter, so relevance is
-  // enforced client-side below instead.
+  // Broad match on title+content, no domain restriction: NewsData.io's free
+  // tier has too little per-domain coverage for a domainurl filter to be
+  // usable, so relevance to the company is enforced client-side below.
   url.searchParams.set("q", query);
   url.searchParams.set("country", "in");
   url.searchParams.set("language", "en");
-  url.searchParams.set("domainurl", NEWS_SOURCES_DOMAINS);
+  url.searchParams.set("category", "business");
 
   const res = await fetch(url);
   if (!res.ok) throw new Error(`NewsData.io error ${res.status}: ${await res.text()}`);
