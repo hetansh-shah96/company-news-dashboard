@@ -43,6 +43,12 @@ async function fetchArticles(companyName, query) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`NewsData.io error ${res.status}: ${await res.text()}`);
   const data = await res.json();
+  console.log(
+    `  [debug] raw results for "${companyName}": ${data.results?.length ?? 0}, totalResults: ${data.totalResults}`
+  );
+  for (const a of (data.results ?? []).slice(0, 5)) {
+    console.log(`  [debug]   - "${a.title}" (${a.source_id})`);
+  }
 
   const nameLower = companyName.toLowerCase();
   const seen = new Set();
