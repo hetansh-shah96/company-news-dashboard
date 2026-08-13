@@ -29,12 +29,13 @@ function istDateString() {
   return ist.toISOString().slice(0, 10);
 }
 
-async function fetchArticles(query) {
+async function fetchArticles(companyName, query) {
   const url = new URL("https://newsdata.io/api/1/news");
   url.searchParams.set("apikey", requireEnv("NEWSDATA_API_KEY"));
-  // qInTitle restricts matches to articles whose title actually contains the
-  // company name, which is far more precise than a general keyword search.
-  url.searchParams.set("qInTitle", `"${query}"`);
+  // Broad match on title+content; NewsData.io's index is too sparse per
+  // domain to survive an exact-phrase qInTitle filter, so relevance is
+  // enforced client-side below instead.
+  url.searchParams.set("q", query);
   url.searchParams.set("country", "in");
   url.searchParams.set("language", "en");
   url.searchParams.set("domainurl", NEWS_SOURCES_DOMAINS);
@@ -43,10 +44,15 @@ async function fetchArticles(query) {
   if (!res.ok) throw new Error(`NewsData.io error ${res.status}: ${await res.text()}`);
   const data = await res.json();
 
+  const nameLower = companyName.toLowerCase();
   const seen = new Set();
   const articles = [];
   for (const a of data.results ?? []) {
     if (seen.has(a.title)) continue;
+    const mentionsCompany =
+      a.title?.toLowerCase().includes(nameLower) ||
+      a.description?.toLowerCase().includes(nameLower);
+    if (!mentionsCompany) continue;
     seen.add(a.title);
     articles.push({
       title: a.title,
@@ -113,7 +119,7 @@ async function main() {
 
   for (const company of companies) {
     console.log(`Fetching news for ${company.name}...`);
-    const articles = await fetchArticles(company.search_query);
+    const articles = await fetchArticles(company.name, company.search_query);
     const summary = await summarize(company.name, articles);
 
     const { error: upsertError } = await supabase
