@@ -97,6 +97,8 @@ main {
 
 .source-name {
   color: var(--muted);
+  font-weight: 600;
+  text-transform: capitalize;
 }
 
 .history {

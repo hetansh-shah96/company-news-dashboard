@@ -79,7 +79,7 @@ async function summarize(companyName, articles) {
     .map((a, i) => `${i + 1}. ${a.title} (${a.source_name})\n${a.snippet}`)
     .join("\n\n");
 
-  const prompt = `You are a financial news summarizer. Summarize today's news about ${companyName} in 3-4 concise sentences for a busy investor. Only use facts from the articles below. If articles are mixed/unrelated, focus on the ones actually about ${companyName}.\n\n${articleBlock}`;
+  const prompt = `You are a financial news summarizer. Summarize today's news about ${companyName} in 3-4 concise sentences for a busy investor. Only use facts from the articles below. If articles are mixed/unrelated, focus on the ones actually about ${companyName}. Treat unverified claims, accusations, or allegations as allegations, not established fact - attribute them (e.g. "an article from X alleges..."), don't state them flatly. Output only the summary itself, with no preamble like "Here is a summary" and no closing remarks.\n\n${articleBlock}`;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
