@@ -1,0 +1,71 @@
+# Company News Dashboard
+
+Daily news summaries for tracked companies (currently Godrej Properties and Biocon), pulled from
+Moneycontrol / Economic Times / Business Standard / LiveMint, summarized by an LLM, and shown on
+a simple browser dashboard. A GitHub Actions cron job runs the fetch daily at 6:00 PM IST.
+
+## How it fits together
+
+- **`supabase/schema.sql`** — the database schema (`companies`, `news_summaries`). Run once in
+  Supabase's SQL editor.
+- **`scripts/fetch-news.mjs`** — the daily job. Pulls news from NewsData.io, summarizes with
+  Groq, writes to Supabase, and writes a CSV backup to `data/`.
+- **`.github/workflows/daily-news.yml`** — runs the script daily at 6 PM IST and commits the CSV
+  backup to this repo (so you always have an offline copy in git history, even if Supabase has
+  an issue).
+- **`dashboard/`** — static HTML/JS page that reads from Supabase and displays the latest +
+  historical summaries per company. No build step; open `index.html` directly or host it
+  anywhere static (GitHub Pages, Vercel, Netlify).
+
+## One-time setup
+
+### 1. Supabase (database)
+1. Create a free project at supabase.com.
+2. Open the SQL editor, paste in `supabase/schema.sql`, run it. This creates the tables, sets
+   read-only public access, and seeds Godrej Properties + Biocon.
+3. From Project Settings → API, grab:
+   - Project URL
+   - `anon` public key (safe for the browser)
+   - `service_role` key (secret — only used by the GitHub Actions script)
+
+### 2. NewsData.io (news source)
+1. Sign up free at newsdata.io — free tier gives 200 credits/day, plenty for 2 companies once a
+   day.
+2. Copy your API key.
+
+### 3. Groq (summarization, free)
+1. Sign up at console.groq.com.
+2. Create an API key.
+
+### 4. Wire up the dashboard
+Edit `dashboard/config.js` and fill in your Supabase URL + anon key.
+
+### 5. Push this repo to GitHub and add secrets
+1. Create a new (private is fine) GitHub repo, push this folder to it.
+2. In the repo's Settings → Secrets and variables → Actions, add:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEWSDATA_API_KEY`
+   - `GROQ_API_KEY`
+3. The workflow runs automatically every day at 6 PM IST. You can also trigger it manually from
+   the Actions tab ("Run workflow") to test it immediately.
+
+### 6. Host the dashboard (optional but recommended)
+Since it's static files, drag the `dashboard/` folder onto Vercel or Netlify, or enable GitHub
+Pages pointed at `dashboard/`. Takes under a minute and gives you a shareable URL.
+
+## Adding more companies
+
+Insert a row into the `companies` table in Supabase (via the table editor or SQL):
+
+```sql
+insert into companies (name, search_query) values ('Tata Motors', 'Tata Motors');
+```
+
+It'll be picked up automatically on the next daily run — no code changes needed.
+
+## Offline backup
+
+Every run also writes `data/YYYY-MM-DD.csv` and commits it back to this repo. That gives you a
+plain-text, versioned history independent of Supabase — pull the repo any time for a fully
+offline copy of everything collected so far.
