@@ -3,6 +3,12 @@ const client = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.a
 
 const app = document.getElementById("app");
 
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("en-IN", {
     day: "numeric",
@@ -12,49 +18,67 @@ function formatDate(dateStr) {
 }
 
 function renderError(message) {
-  app.innerHTML = `<p class="error">${message}</p>`;
+  app.innerHTML = `<p class="error">${escapeHtml(message)}</p>`;
+}
+
+function sourceListHtml(sources) {
+  return sources
+    .map(
+      (s) => `
+      <li>
+        <span class="source-tag">${escapeHtml(s.source_name)}</span>
+        <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a>
+      </li>`
+    )
+    .join("");
 }
 
 function renderCompanies(companies, summariesByCompany) {
-  app.innerHTML = "";
+  app.innerHTML = '<div class="grid"></div>';
+  const grid = app.querySelector(".grid");
 
   for (const company of companies) {
     const summaries = summariesByCompany.get(company.id) ?? [];
-    const card = document.createElement("section");
-    card.className = "company-card";
-
     const latest = summaries[0];
     const history = summaries.slice(1);
 
+    const card = document.createElement("article");
+    card.className = "company-card";
+
     card.innerHTML = `
-      <h2>${company.name}</h2>
+      <div class="card-top">
+        <h2>${escapeHtml(company.name)}</h2>
+        ${
+          latest?.sources?.length
+            ? `<span class="count-badge">${latest.sources.length} source${latest.sources.length === 1 ? "" : "s"}</span>`
+            : ""
+        }
+      </div>
       ${
         latest
           ? `
-        <div class="latest">
-          <span class="date">${formatDate(latest.run_date)}</span>
-          <p class="summary">${latest.summary}</p>
-          <ul class="sources">
-            ${latest.sources
-              .map(
-                (s) =>
-                  `<li><a href="${s.url}" target="_blank" rel="noopener">${s.title}</a> <span class="source-name">— ${s.source_name}</span></li>`
-              )
-              .join("")}
-          </ul>
-        </div>`
+        <time class="date">${formatDate(latest.run_date)}</time>
+        <p class="summary">${escapeHtml(latest.summary)}</p>
+        ${
+          latest.sources?.length
+            ? `<details class="sources-toggle">
+                <summary>Sources</summary>
+                <ul class="source-list">${sourceListHtml(latest.sources)}</ul>
+              </details>`
+            : ""
+        }`
           : `<p class="empty">No summary yet.</p>`
       }
       ${
         history.length
           ? `<details class="history">
-              <summary>Previous ${history.length} day(s)</summary>
+              <summary>Previous ${history.length} day${history.length === 1 ? "" : "s"}</summary>
               ${history
                 .map(
                   (h) => `
                 <div class="history-item">
-                  <span class="date">${formatDate(h.run_date)}</span>
-                  <p class="summary">${h.summary}</p>
+                  <time class="date">${formatDate(h.run_date)}</time>
+                  <p class="summary">${escapeHtml(h.summary)}</p>
                 </div>`
                 )
                 .join("")}
@@ -63,7 +87,7 @@ function renderCompanies(companies, summariesByCompany) {
       }
     `;
 
-    app.appendChild(card);
+    grid.appendChild(card);
   }
 }
 
