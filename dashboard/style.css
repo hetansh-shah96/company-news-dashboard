@@ -89,9 +89,9 @@ body {
 }
 
 .topbar-inner {
-  max-width: 960px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 1.15rem 1.5rem;
+  padding: 1.15rem 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -145,15 +145,15 @@ body {
 /* ---------- layout ---------- */
 
 main {
-  max-width: 960px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 1.75rem 1.5rem 3rem;
+  padding: 1.75rem 2rem 3rem;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.1rem;
 }
 
 /* ---------- company card ---------- */
