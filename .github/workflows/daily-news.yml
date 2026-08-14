@@ -30,6 +30,8 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NEWSDATA_API_KEY: ${{ secrets.NEWSDATA_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
         run: node fetch-news.mjs
 
       - name: Move backup into repo root data folder

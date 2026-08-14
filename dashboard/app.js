@@ -33,6 +33,18 @@ function sourceListHtml(sources) {
     .join("");
 }
 
+function chatterSourceListHtml(posts) {
+  return posts
+    .map(
+      (p) => `
+      <li>
+        <span class="source-tag chatter-tag">${escapeHtml(p.source_label)}</span>
+        <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener">${escapeHtml(p.title)}</a>
+      </li>`
+    )
+    .join("");
+}
+
 function renderCompanies(companies, summariesByCompany) {
   app.innerHTML = '<div class="grid"></div>';
   const grid = app.querySelector(".grid");
@@ -58,6 +70,7 @@ function renderCompanies(companies, summariesByCompany) {
         latest
           ? `
         <time class="date">${formatDate(latest.run_date)}</time>
+        <p class="section-label">Official news</p>
         <p class="summary">${escapeHtml(latest.summary)}</p>
         ${
           latest.sources?.length
@@ -65,6 +78,22 @@ function renderCompanies(companies, summariesByCompany) {
                 <summary>Sources</summary>
                 <ul class="source-list">${sourceListHtml(latest.sources)}</ul>
               </details>`
+            : ""
+        }
+        ${
+          latest.chatter_summary
+            ? `<div class="chatter-block">
+                <p class="section-label chatter-label">Social chatter <span class="unverified-tag">Unverified</span></p>
+                <p class="summary chatter-summary">${escapeHtml(latest.chatter_summary)}</p>
+                ${
+                  latest.chatter_sources?.length
+                    ? `<details class="sources-toggle">
+                        <summary>Chatter sources</summary>
+                        <ul class="source-list">${chatterSourceListHtml(latest.chatter_sources)}</ul>
+                      </details>`
+                    : ""
+                }
+              </div>`
             : ""
         }`
           : `<p class="empty">No summary yet.</p>`
@@ -78,7 +107,14 @@ function renderCompanies(companies, summariesByCompany) {
                   (h) => `
                 <div class="history-item">
                   <time class="date">${formatDate(h.run_date)}</time>
+                  <p class="section-label">Official news</p>
                   <p class="summary">${escapeHtml(h.summary)}</p>
+                  ${
+                    h.chatter_summary
+                      ? `<p class="section-label chatter-label">Social chatter <span class="unverified-tag">Unverified</span></p>
+                         <p class="summary chatter-summary">${escapeHtml(h.chatter_summary)}</p>`
+                      : ""
+                  }
                 </div>`
                 )
                 .join("")}
@@ -105,7 +141,7 @@ async function load() {
 
   const { data: summaries, error: summariesError } = await client
     .from("news_summaries")
-    .select("company_id, run_date, summary, sources")
+    .select("company_id, run_date, summary, sources, chatter_summary, chatter_sources")
     .order("run_date", { ascending: false })
     .limit(200);
 

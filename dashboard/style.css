@@ -10,6 +10,10 @@
   --border: #e5e7eb;
   --badge-bg: #f1f3f6;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --chatter-bg: #fdf8ee;
+  --chatter-bg-strong: #f7ecd2;
+  --chatter-border: #e4cd8e;
+  --chatter-accent: #92720f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -24,6 +28,10 @@
     --border: #262b35;
     --badge-bg: #1f232c;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.25);
+    --chatter-bg: #201c10;
+    --chatter-bg-strong: #362c11;
+    --chatter-border: #55461a;
+    --chatter-accent: #e0b84d;
   }
 }
 
@@ -134,6 +142,51 @@ main {
   font-size: 0.93rem;
   margin: 0 0 0.9rem;
   color: var(--text);
+}
+
+.section-label {
+  margin: 0 0 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.chatter-block {
+  margin-top: 0.9rem;
+  padding: 0.85rem 0.9rem;
+  background: var(--chatter-bg);
+  border: 1px dashed var(--chatter-border);
+  border-radius: 10px;
+}
+
+.chatter-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--chatter-accent);
+}
+
+.chatter-summary {
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
+.unverified-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--chatter-accent);
+  background: var(--chatter-bg-strong);
+  border-radius: 4px;
+  padding: 0.08rem 0.35rem;
+}
+
+.chatter-tag {
+  color: var(--chatter-accent);
+  background: var(--chatter-bg-strong);
 }
 
 .sources-toggle {

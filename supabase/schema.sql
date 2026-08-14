@@ -14,9 +14,18 @@ create table if not exists news_summaries (
   run_date date not null,          -- the day this summary covers (IST date)
   summary text not null,
   sources jsonb not null default '[]',  -- [{title, url, source_name, published_at}, ...]
+  -- Unverified social chatter (Reddit), kept separate from the official
+  -- news summary above so the two are never visually or semantically mixed.
+  chatter_summary text,
+  chatter_sources jsonb not null default '[]',  -- [{title, url, subreddit, score, num_comments, permalink}, ...]
   created_at timestamptz not null default now(),
   unique (company_id, run_date)
 );
+
+-- Safe to re-run on an existing table: adds the chatter columns if this
+-- schema.sql was already run once before they existed.
+alter table news_summaries add column if not exists chatter_summary text;
+alter table news_summaries add column if not exists chatter_sources jsonb not null default '[]';
 
 alter table companies enable row level security;
 alter table news_summaries enable row level security;

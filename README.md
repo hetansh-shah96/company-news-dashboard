@@ -1,21 +1,28 @@
 # Company News Dashboard
 
-Daily news summaries for tracked companies (currently Godrej Properties and Biocon), pulled from
-Moneycontrol / Economic Times / Business Standard / LiveMint, summarized by an LLM, and shown on
-a simple browser dashboard. A GitHub Actions cron job runs the fetch daily at 6:00 PM IST.
+Daily summaries for tracked companies (currently Godrej Properties and Biocon), split into two
+clearly separate kinds:
+
+- **Official news** — from Indian business news sources via NewsData.io.
+- **Social chatter (unverified)** — rumors/speculation/sentiment from Reddit and StockTwits,
+  visually and semantically kept apart from the official summary so the two are never confused.
+
+Both are summarized by an LLM and shown on a simple browser dashboard. A GitHub Actions cron job
+runs the fetch daily at 6:00 PM IST.
 
 ## How it fits together
 
 - **`supabase/schema.sql`** — the database schema (`companies`, `news_summaries`). Run once in
   Supabase's SQL editor.
-- **`scripts/fetch-news.mjs`** — the daily job. Pulls news from NewsData.io, summarizes with
-  Groq, writes to Supabase, and writes a CSV backup to `data/`.
+- **`scripts/fetch-news.mjs`** — the daily job. Pulls news from NewsData.io and chatter from
+  Reddit + StockTwits, summarizes both separately with Groq, writes to Supabase, and writes a CSV
+  backup to `data/`.
 - **`.github/workflows/daily-news.yml`** — runs the script daily at 6 PM IST and commits the CSV
   backup to this repo (so you always have an offline copy in git history, even if Supabase has
   an issue).
 - **`dashboard/`** — static HTML/JS page that reads from Supabase and displays the latest +
-  historical summaries per company. No build step; open `index.html` directly or host it
-  anywhere static (GitHub Pages, Vercel, Netlify).
+  historical summaries per company, with chatter shown in a distinct "Unverified" box. No build
+  step; open `index.html` directly or host it anywhere static (GitHub Pages, Vercel, Netlify).
 
 ## One-time setup
 
@@ -37,20 +44,32 @@ a simple browser dashboard. A GitHub Actions cron job runs the fetch daily at 6:
 1. Sign up at console.groq.com.
 2. Create an API key.
 
-### 4. Wire up the dashboard
+### 4. Reddit (social chatter, free)
+1. Log into Reddit → reddit.com/prefs/apps → "create another app...".
+2. Name it anything, choose type **"script"**, set the redirect URI to `http://localhost` (not
+   used, but required by the form).
+3. After creating it, copy the **client ID** (short string under the app name) and the **secret**.
+
+StockTwits chatter needs no key — its public read endpoints are used as-is. If StockTwits ever
+changes that policy, the job just logs a warning and treats it as "no chatter" rather than
+failing.
+
+### 5. Wire up the dashboard
 Edit `dashboard/config.js` and fill in your Supabase URL + anon key.
 
-### 5. Push this repo to GitHub and add secrets
+### 6. Push this repo to GitHub and add secrets
 1. Create a new (private is fine) GitHub repo, push this folder to it.
 2. In the repo's Settings → Secrets and variables → Actions, add:
    - `SUPABASE_URL`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `NEWSDATA_API_KEY`
    - `GROQ_API_KEY`
+   - `REDDIT_CLIENT_ID`
+   - `REDDIT_CLIENT_SECRET`
 3. The workflow runs automatically every day at 6 PM IST. You can also trigger it manually from
    the Actions tab ("Run workflow") to test it immediately.
 
-### 6. Host the dashboard (optional but recommended)
+### 7. Host the dashboard (optional but recommended)
 Since it's static files, drag the `dashboard/` folder onto Vercel or Netlify, or enable GitHub
 Pages pointed at `dashboard/`. Takes under a minute and gives you a shareable URL.
 
