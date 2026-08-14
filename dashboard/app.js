@@ -45,6 +45,10 @@ function chatterSourceListHtml(posts) {
     .join("");
 }
 
+function hasContent(row) {
+  return Boolean(row.sources?.length || row.chatter_sources?.length);
+}
+
 function renderCompanies(companies, summariesByCompany) {
   app.innerHTML = '<div class="grid"></div>';
   const grid = app.querySelector(".grid");
@@ -53,6 +57,8 @@ function renderCompanies(companies, summariesByCompany) {
     const summaries = summariesByCompany.get(company.id) ?? [];
     const latest = summaries[0];
     const history = summaries.slice(1);
+    const notableHistory = history.filter(hasContent);
+    const quietCount = history.length - notableHistory.length;
 
     const card = document.createElement("article");
     card.className = "company-card";
@@ -99,10 +105,10 @@ function renderCompanies(companies, summariesByCompany) {
           : `<p class="empty">No summary yet.</p>`
       }
       ${
-        history.length
+        notableHistory.length
           ? `<details class="history">
-              <summary>Previous ${history.length} day${history.length === 1 ? "" : "s"}</summary>
-              ${history
+              <summary>Previous ${notableHistory.length} notable day${notableHistory.length === 1 ? "" : "s"}</summary>
+              ${notableHistory
                 .map(
                   (h) => `
                 <div class="history-item">
@@ -110,7 +116,7 @@ function renderCompanies(companies, summariesByCompany) {
                   <p class="section-label">Official news</p>
                   <p class="summary">${escapeHtml(h.summary)}</p>
                   ${
-                    h.chatter_summary
+                    h.chatter_summary && h.chatter_sources?.length
                       ? `<p class="section-label chatter-label">Social chatter <span class="unverified-tag">Unverified</span></p>
                          <p class="summary chatter-summary">${escapeHtml(h.chatter_summary)}</p>`
                       : ""
@@ -118,8 +124,15 @@ function renderCompanies(companies, summariesByCompany) {
                 </div>`
                 )
                 .join("")}
+              ${
+                quietCount
+                  ? `<p class="quiet-note">${quietCount} other day${quietCount === 1 ? "" : "s"} in this period had no notable news or chatter.</p>`
+                  : ""
+              }
             </details>`
-          : ""
+          : quietCount
+            ? `<p class="quiet-note">No notable news or chatter in the previous ${quietCount} day${quietCount === 1 ? "" : "s"}.</p>`
+            : ""
       }
     `;
 
