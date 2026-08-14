@@ -4,7 +4,8 @@
 // a local CSV backup.
 //
 // Required env vars (set as GitHub Actions secrets):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEWSDATA_API_KEY, GROQ_API_KEY,
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEWSDATA_API_KEY, GROQ_API_KEY
+// Optional (Reddit chatter is skipped gracefully if these aren't set):
 //   REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET
 
 import { createClient } from "@supabase/supabase-js";
@@ -83,9 +84,18 @@ async function summarizeNews(companyName, articles) {
 }
 
 async function fetchRedditToken() {
-  const auth = Buffer.from(
-    `${requireEnv("REDDIT_CLIENT_ID")}:${requireEnv("REDDIT_CLIENT_SECRET")}`
-  ).toString("base64");
+  // Reddit credentials are optional: if the app registration hasn't been
+  // approved yet (Reddit has been gating self-serve app creation behind a
+  // support ticket for newer accounts), skip Reddit chatter entirely rather
+  // than failing the whole job.
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    console.log("  [info] Reddit credentials not set, skipping Reddit chatter.");
+    return null;
+  }
+
+  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   const res = await fetch("https://www.reddit.com/api/v1/access_token", {
     method: "POST",
@@ -97,12 +107,17 @@ async function fetchRedditToken() {
     body: "grant_type=client_credentials",
   });
 
-  if (!res.ok) throw new Error(`Reddit auth error ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    console.log(`  [warn] Reddit auth failed: ${res.status}, skipping Reddit chatter.`);
+    return null;
+  }
   const data = await res.json();
   return data.access_token;
 }
 
 async function fetchRedditChatter(companyName, token) {
+  if (!token) return [];
+
   const url = new URL("https://oauth.reddit.com/search");
   url.searchParams.set("q", companyName);
   url.searchParams.set("sort", "new");
