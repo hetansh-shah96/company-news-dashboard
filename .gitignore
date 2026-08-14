@@ -1,3 +1,5 @@
 node_modules/
 .env
 .env.local
+stitch_extract/
+stitch_company_watch_digest.zip

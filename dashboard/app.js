@@ -2,6 +2,7 @@ const { createClient } = window.supabase;
 const client = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
 
 const app = document.getElementById("app");
+const lastRefreshedEl = document.getElementById("lastRefreshed");
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -17,36 +18,51 @@ function formatDate(dateStr) {
   });
 }
 
+function formatRelativeTime(date) {
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `${days}d ago`;
+}
+
 function renderError(message) {
   app.innerHTML = `<p class="error">${escapeHtml(message)}</p>`;
 }
 
-function sourceListHtml(sources) {
-  return sources
+function tagRowHtml(items, tagClass, labelKey) {
+  return `<div class="tag-row">${items
     .map(
-      (s) => `
-      <li>
-        <span class="source-tag">${escapeHtml(s.source_name)}</span>
-        <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a>
-      </li>`
+      (item) =>
+        `<a class="source-tag ${tagClass}" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item[labelKey])}</a>`
     )
-    .join("");
-}
-
-function chatterSourceListHtml(posts) {
-  return posts
-    .map(
-      (p) => `
-      <li>
-        <span class="source-tag chatter-tag">${escapeHtml(p.source_label)}</span>
-        <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener">${escapeHtml(p.title)}</a>
-      </li>`
-    )
-    .join("");
+    .join("")}</div>`;
 }
 
 function hasContent(row) {
   return Boolean(row.sources?.length || row.chatter_sources?.length);
+}
+
+function officialSectionHtml(row) {
+  return `
+    <div class="section">
+      <p class="section-label"><span class="icon">newspaper</span>Official news</p>
+      <p class="summary">${escapeHtml(row.summary)}</p>
+      ${row.sources?.length ? tagRowHtml(row.sources, "", "source_name") : ""}
+    </div>`;
+}
+
+function chatterSectionHtml(row) {
+  if (!row.chatter_summary) return "";
+  return `
+    <div class="section chatter-block">
+      <p class="section-label chatter-label"><span class="icon">forum</span>Social chatter · unverified</p>
+      <p class="summary chatter-summary">${escapeHtml(row.chatter_summary)}</p>
+      ${row.chatter_sources?.length ? tagRowHtml(row.chatter_sources, "chatter-tag", "source_label") : ""}
+    </div>`;
 }
 
 function renderCompanies(companies, summariesByCompany) {
@@ -63,9 +79,36 @@ function renderCompanies(companies, summariesByCompany) {
     const card = document.createElement("article");
     card.className = "company-card";
 
+    const footerHtml = notableHistory.length
+      ? `<details class="history">
+          <summary>
+            <span class="icon">history</span>
+            ${notableHistory.length} notable day${notableHistory.length === 1 ? "" : "s"} in history
+            ${quietCount ? ` · ${quietCount} quiet` : ""}
+          </summary>
+          <div class="history-body">
+            ${notableHistory
+              .map(
+                (h) => `
+              <div class="history-item">
+                <time class="date">${formatDate(h.run_date)}</time>
+                ${officialSectionHtml(h)}
+                ${chatterSectionHtml(h)}
+              </div>`
+              )
+              .join("")}
+          </div>
+        </details>`
+      : history.length
+        ? `<p class="quiet-note"><span class="icon">history</span> ${history.length} other day${history.length === 1 ? "" : "s"} had no notable news.</p>`
+        : "";
+
     card.innerHTML = `
       <div class="card-top">
-        <h2>${escapeHtml(company.name)}</h2>
+        <div>
+          <h2>${escapeHtml(company.name)}</h2>
+          ${latest ? `<time class="date">Updated: ${formatDate(latest.run_date)}</time>` : ""}
+        </div>
         ${
           latest?.sources?.length
             ? `<span class="count-badge">${latest.sources.length} source${latest.sources.length === 1 ? "" : "s"}</span>`
@@ -74,66 +117,10 @@ function renderCompanies(companies, summariesByCompany) {
       </div>
       ${
         latest
-          ? `
-        <time class="date">${formatDate(latest.run_date)}</time>
-        <p class="section-label">Official news</p>
-        <p class="summary">${escapeHtml(latest.summary)}</p>
-        ${
-          latest.sources?.length
-            ? `<details class="sources-toggle">
-                <summary>Sources</summary>
-                <ul class="source-list">${sourceListHtml(latest.sources)}</ul>
-              </details>`
-            : ""
-        }
-        ${
-          latest.chatter_summary
-            ? `<div class="chatter-block">
-                <p class="section-label chatter-label">Social chatter <span class="unverified-tag">Unverified</span></p>
-                <p class="summary chatter-summary">${escapeHtml(latest.chatter_summary)}</p>
-                ${
-                  latest.chatter_sources?.length
-                    ? `<details class="sources-toggle">
-                        <summary>Chatter sources</summary>
-                        <ul class="source-list">${chatterSourceListHtml(latest.chatter_sources)}</ul>
-                      </details>`
-                    : ""
-                }
-              </div>`
-            : ""
-        }`
-          : `<p class="empty">No summary yet.</p>`
+          ? `${officialSectionHtml(latest)}${chatterSectionHtml(latest)}`
+          : `<p class="empty section">No summary yet.</p>`
       }
-      ${
-        notableHistory.length
-          ? `<details class="history">
-              <summary>Previous ${notableHistory.length} notable day${notableHistory.length === 1 ? "" : "s"}</summary>
-              ${notableHistory
-                .map(
-                  (h) => `
-                <div class="history-item">
-                  <time class="date">${formatDate(h.run_date)}</time>
-                  <p class="section-label">Official news</p>
-                  <p class="summary">${escapeHtml(h.summary)}</p>
-                  ${
-                    h.chatter_summary && h.chatter_sources?.length
-                      ? `<p class="section-label chatter-label">Social chatter <span class="unverified-tag">Unverified</span></p>
-                         <p class="summary chatter-summary">${escapeHtml(h.chatter_summary)}</p>`
-                      : ""
-                  }
-                </div>`
-                )
-                .join("")}
-              ${
-                quietCount
-                  ? `<p class="quiet-note">${quietCount} other day${quietCount === 1 ? "" : "s"} in this period had no notable news or chatter.</p>`
-                  : ""
-              }
-            </details>`
-          : quietCount
-            ? `<p class="quiet-note">No notable news or chatter in the previous ${quietCount} day${quietCount === 1 ? "" : "s"}.</p>`
-            : ""
-      }
+      ${footerHtml}
     `;
 
     grid.appendChild(card);
@@ -154,13 +141,21 @@ async function load() {
 
   const { data: summaries, error: summariesError } = await client
     .from("news_summaries")
-    .select("company_id, run_date, summary, sources, chatter_summary, chatter_sources")
+    .select("company_id, run_date, summary, sources, chatter_summary, chatter_sources, created_at")
     .order("run_date", { ascending: false })
     .limit(200);
 
   if (summariesError) {
     renderError(`Failed to load summaries: ${summariesError.message}`);
     return;
+  }
+
+  if (summaries.length) {
+    const latestCreatedAt = summaries.reduce(
+      (max, row) => Math.max(max, new Date(row.created_at).getTime()),
+      0
+    );
+    lastRefreshedEl.textContent = `Last refreshed: ${formatRelativeTime(new Date(latestCreatedAt))}`;
   }
 
   const summariesByCompany = new Map();

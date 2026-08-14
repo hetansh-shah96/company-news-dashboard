@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20,400,0&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap"
     rel="stylesheet"
   />
   <link rel="stylesheet" href="style.css" />
@@ -15,19 +15,19 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand">
-        <span class="brand-mark"></span>
-        <div class="brand-text">
-          <h1>Company Watch</h1>
-          <span class="brand-sub">Daily desk for tracked companies</span>
-        </div>
-      </div>
-      <span class="updated">Refreshed daily · 18:00 IST</span>
+      <h1>Company Watch</h1>
+      <span class="updated" id="lastRefreshed"></span>
     </div>
   </header>
 
-  <main id="app">
-    <p class="loading">Loading…</p>
+  <main>
+    <div class="page-intro">
+      <h2>Market Overview</h2>
+      <p>Daily company news, split from unverified social chatter.</p>
+    </div>
+    <div id="app">
+      <p class="loading">Loading…</p>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
