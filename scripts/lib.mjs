@@ -1,7 +1,7 @@
 // Shared fetch/summarize helpers used by both the daily job (fetch-news.mjs)
 // and the one-off historical backfill (backfill-history.mjs).
 
-export const GROQ_MODEL = "llama-3.3-70b-versatile";
+export const GROQ_MODEL = "openai/gpt-oss-120b";
 export const REDDIT_USER_AGENT =
   "web:company-news-dashboard:1.0 (by /u/company-news-dashboard-bot)";
 
