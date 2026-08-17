@@ -3,6 +3,8 @@ const client = createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.a
 
 const app = document.getElementById("app");
 const lastRefreshedEl = document.getElementById("lastRefreshed");
+const refreshBtn = document.getElementById("refreshBtn");
+const refreshBtnLabel = document.getElementById("refreshBtnLabel");
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -126,6 +128,46 @@ function renderCompanies(companies, summariesByCompany) {
     grid.appendChild(card);
   }
 }
+
+function setRefreshLabel(text, revertAfterMs) {
+  refreshBtnLabel.textContent = text;
+  if (revertAfterMs) {
+    setTimeout(() => {
+      refreshBtnLabel.textContent = "Refresh news";
+      refreshBtn.disabled = false;
+    }, revertAfterMs);
+  }
+}
+
+async function triggerRefresh() {
+  refreshBtn.disabled = true;
+  setRefreshLabel("Refreshing…");
+
+  try {
+    const res = await fetch(`${window.SUPABASE_CONFIG.url}/functions/v1/refresh-news`, {
+      method: "POST",
+      headers: {
+        apikey: window.SUPABASE_CONFIG.anonKey,
+        Authorization: `Bearer ${window.SUPABASE_CONFIG.anonKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok) {
+      setRefreshLabel("Triggered ✓ (~1-2 min)", 6000);
+    } else if (res.status === 429) {
+      const mins = Math.max(1, Math.ceil((data.retryAfterSeconds ?? 0) / 60));
+      setRefreshLabel(`Refreshed recently — wait ~${mins}m`, 6000);
+    } else {
+      setRefreshLabel("Refresh failed", 6000);
+    }
+  } catch {
+    setRefreshLabel("Refresh failed", 6000);
+  }
+}
+
+refreshBtn.addEventListener("click", triggerRefresh);
 
 async function load() {
   const { data: companies, error: companiesError } = await client

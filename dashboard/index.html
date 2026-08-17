@@ -18,16 +18,10 @@
       <h1>Company Watch</h1>
       <div class="topbar-actions">
         <span class="updated" id="lastRefreshed"></span>
-        <a
-          class="refresh-btn"
-          href="https://github.com/hetansh-shah96/company-news-dashboard/actions/workflows/daily-news.yml"
-          target="_blank"
-          rel="noopener"
-          title="Opens the GitHub Actions page — click &quot;Run workflow&quot; there to fetch fresh news now"
-        >
+        <button id="refreshBtn" class="refresh-btn" type="button">
           <span class="icon">refresh</span>
-          Refresh news
-        </a>
+          <span id="refreshBtnLabel">Refresh news</span>
+        </button>
       </div>
     </div>
   </header>
