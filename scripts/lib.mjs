@@ -230,21 +230,44 @@ export async function summarizeChatter(companyName, posts, dayLabel = "today") {
   return callGroq(prompt);
 }
 
-export async function callGroq(prompt) {
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${requireEnv("GROQ_API_KEY")}`,
-    },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-    }),
-  });
+const GROQ_MAX_RETRIES = 4;
 
-  if (!res.ok) throw new Error(`Groq error ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.choices[0].message.content.trim();
+function groqRetryDelayMs(status, body) {
+  if (status !== 429) return null;
+  const match = body.match(/try again in ([\d.]+)s/i);
+  const seconds = match ? parseFloat(match[1]) : 5;
+  return Math.ceil(seconds * 1000) + 500;
+}
+
+export async function callGroq(prompt) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${requireEnv("GROQ_API_KEY")}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return data.choices[0].message.content.trim();
+    }
+
+    const body = await res.text();
+    const retryDelay = groqRetryDelayMs(res.status, body);
+    if (retryDelay === null || attempt >= GROQ_MAX_RETRIES) {
+      throw new Error(`Groq error ${res.status}: ${body}`);
+    }
+
+    console.log(
+      `  [warn] Groq rate limited, retrying in ${Math.round(retryDelay / 1000)}s (attempt ${attempt + 1}/${GROQ_MAX_RETRIES})...`
+    );
+    await new Promise((resolve) => setTimeout(resolve, retryDelay));
+  }
 }
