@@ -100,7 +100,7 @@ export async function summarizeNews(companyName, articles, dayLabel = "today") {
     .map((a, i) => `${i + 1}. ${a.title} (${a.source_name})\n${a.snippet}`)
     .join("\n\n");
 
-  const prompt = `You are a financial news summarizer. Summarize the news about ${companyName} below in 3-4 concise sentences for a busy investor. Only use facts from the articles below. If articles are mixed/unrelated, focus on the ones actually about ${companyName}. Treat unverified claims, accusations, or allegations as allegations, not established fact - attribute them (e.g. "an article from X alleges..."), don't state them flatly. Output only the summary itself, with no preamble like "Here is a summary" and no closing remarks.\n\n${articleBlock}`;
+  const prompt = `You are a financial news summarizer. Summarize the news about ${companyName} below as 3-4 concise bullet points for a busy investor, one distinct fact or development per bullet. Only use facts from the articles below. If articles are mixed/unrelated, focus on the ones actually about ${companyName}. Treat unverified claims, accusations, or allegations as allegations, not established fact - attribute them (e.g. "an article from X alleges..."), don't state them flatly. Output ONLY the bullet points, one per line, each starting with "- ", with no preamble like "Here is a summary", no closing remarks, and no other formatting.\n\n${articleBlock}`;
 
   return callClaude(prompt);
 }
@@ -155,7 +155,7 @@ export async function summarizeChatter(companyName, posts, dayLabel = "today") {
     .map((p, i) => `${i + 1}. [${p.source_label}] ${p.title}\n${p.snippet}`)
     .join("\n\n");
 
-  const prompt = `You are monitoring social media (StockTwits) for chatter about ${companyName} - things like rumors, speculation about leadership changes, sentiment, or unconfirmed claims that have NOT been reported by official news outlets. This is explicitly NOT verified news. Summarize the chatter in 2-3 sentences. Every sentence must make clear this is unverified social media speculation, not fact (e.g. "StockTwits users are speculating that...", "one post claims, without evidence, that..."). If the posts are generic/unrelated to ${companyName} specifically rather than containing real chatter about it, say that plainly instead of forcing a summary. Output only the summary itself, with no preamble and no closing remarks.\n\n${postBlock}`;
+  const prompt = `You are monitoring social media (StockTwits) for chatter about ${companyName} - things like rumors, speculation about leadership changes, sentiment, or unconfirmed claims that have NOT been reported by official news outlets. This is explicitly NOT verified news. Summarize the chatter as 2-3 concise bullet points. Every bullet must make clear this is unverified social media speculation, not fact (e.g. "StockTwits users are speculating that...", "one post claims, without evidence, that..."). If the posts are generic/unrelated to ${companyName} specifically rather than containing real chatter about it, output a single bullet saying that plainly instead of forcing a summary. Output ONLY the bullet points, one per line, each starting with "- ", with no preamble and no closing remarks.\n\n${postBlock}`;
 
   return callClaude(prompt);
 }

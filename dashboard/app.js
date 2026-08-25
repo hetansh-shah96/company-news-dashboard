@@ -5,6 +5,10 @@ const app = document.getElementById("app");
 const lastRefreshedEl = document.getElementById("lastRefreshed");
 const refreshBtn = document.getElementById("refreshBtn");
 const refreshBtnLabel = document.getElementById("refreshBtnLabel");
+const downloadBtn = document.getElementById("downloadBtn");
+
+let loadedCompanies = [];
+let loadedSummaries = [];
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -48,11 +52,26 @@ function hasContent(row) {
   return Boolean(row.sources?.length || row.chatter_sources?.length);
 }
 
+// Newer summaries come back as "- point one\n- point two" bullet lines; older
+// rows stored before this format still have a single paragraph. Render
+// whichever shape the text actually has instead of forcing one or the other.
+function summaryBlockHtml(text, className) {
+  const lines = (text ?? "")
+    .split(/\r?\n+/)
+    .map((line) => line.replace(/^[-•]\s*/, "").trim())
+    .filter(Boolean);
+
+  if (lines.length > 1) {
+    return `<ul class="${className}">${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`;
+  }
+  return `<p class="${className}">${escapeHtml(text)}</p>`;
+}
+
 function officialSectionHtml(row) {
   return `
     <div class="section">
       <p class="section-label"><span class="icon">newspaper</span>Official news</p>
-      <p class="summary">${escapeHtml(row.summary)}</p>
+      ${summaryBlockHtml(row.summary, "summary")}
       ${row.sources?.length ? tagRowHtml(row.sources, "", "source_name") : ""}
     </div>`;
 }
@@ -62,7 +81,7 @@ function chatterSectionHtml(row) {
   return `
     <div class="section chatter-block">
       <p class="section-label chatter-label"><span class="icon">forum</span>Social chatter · unverified</p>
-      <p class="summary chatter-summary">${escapeHtml(row.chatter_summary)}</p>
+      ${summaryBlockHtml(row.chatter_summary, "summary chatter-summary")}
       ${row.chatter_sources?.length ? tagRowHtml(row.chatter_sources, "chatter-tag", "source_label") : ""}
     </div>`;
 }
@@ -172,6 +191,46 @@ async function triggerRefresh() {
 
 refreshBtn.addEventListener("click", triggerRefresh);
 
+function toCsvField(value) {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function downloadCsv() {
+  if (!loadedSummaries.length) return;
+
+  const companyNameById = new Map(loadedCompanies.map((c) => [c.id, c.name]));
+  const rows = [
+    ["run_date", "company", "summary", "source_titles", "chatter_summary", "chatter_source_titles"]
+      .map(toCsvField)
+      .join(","),
+  ];
+
+  for (const row of loadedSummaries) {
+    rows.push(
+      [
+        row.run_date,
+        companyNameById.get(row.company_id) ?? "",
+        row.summary,
+        (row.sources ?? []).map((s) => s.title).join(" | "),
+        row.chatter_summary,
+        (row.chatter_sources ?? []).map((s) => s.title).join(" | "),
+      ]
+        .map(toCsvField)
+        .join(",")
+    );
+  }
+
+  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `watchlist-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+downloadBtn.addEventListener("click", downloadCsv);
+
 async function load() {
   const { data: companies, error: companiesError } = await client
     .from("companies")
@@ -202,6 +261,9 @@ async function load() {
     );
     lastRefreshedEl.textContent = `Last refreshed: ${formatRelativeTime(new Date(latestCreatedAt))}`;
   }
+
+  loadedCompanies = companies;
+  loadedSummaries = summaries;
 
   const summariesByCompany = new Map();
   for (const row of summaries) {
