@@ -5,10 +5,10 @@
 //
 // Usage: node backfill-history.mjs "South Indian Bank" "Karnataka Bank"
 //
-// Social chatter (Reddit/StockTwits) only reflects the current moment on
-// these free APIs -- there's no historical chatter endpoint available, so
-// only "today" gets a real chatter summary; earlier days get an honest
-// placeholder saying chatter tracking starts today.
+// Social chatter (StockTwits) only reflects the current moment on this free
+// API -- there's no historical chatter endpoint available, so only "today"
+// gets a real chatter summary; earlier days get an honest placeholder saying
+// chatter tracking starts today.
 
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -17,8 +17,6 @@ import {
   daysAgo,
   fetchArticlesMultiPage,
   summarizeNews,
-  fetchRedditToken,
-  fetchRedditChatter,
   fetchStockTwitsChatter,
   summarizeChatter,
 } from "./lib.mjs";
@@ -36,8 +34,6 @@ async function main() {
     console.error('Usage: node backfill-history.mjs "Company Name" ["Another Company"]');
     process.exit(1);
   }
-
-  const redditToken = await fetchRedditToken();
 
   for (const name of companyNames) {
     const { data: company, error } = await supabase
@@ -71,11 +67,7 @@ async function main() {
       let chatterSummary;
       let chatterPosts = [];
       if (i === 0) {
-        const [redditPosts, stockTwitsPosts] = await Promise.all([
-          fetchRedditChatter(company.name, redditToken),
-          fetchStockTwitsChatter(company.name),
-        ]);
-        chatterPosts = [...redditPosts, ...stockTwitsPosts];
+        chatterPosts = await fetchStockTwitsChatter(company.name);
         chatterSummary = await summarizeChatter(company.name, chatterPosts, "today");
       } else {
         chatterSummary = `Social chatter tracking for ${company.name} began today; no historical chatter data is available for ${date}.`;

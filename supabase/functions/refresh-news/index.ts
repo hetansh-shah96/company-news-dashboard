@@ -1,7 +1,7 @@
 // Public-facing "refresh news" trigger. Called anonymously from the dashboard
 // button. Holds the GitHub token server-side so it never reaches the browser,
 // and enforces a cooldown (by checking the workflow's own run history) so the
-// button can't be spammed into burning through the Groq/NewsData quota.
+// button can't be spammed into burning through the Anthropic/NewsData quota.
 const GITHUB_OWNER = "hetansh-shah96";
 const GITHUB_REPO = "company-news-dashboard";
 const WORKFLOW_FILE = "daily-news.yml";
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     Authorization: `Bearer ${githubToken}`,
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
-    "User-Agent": "company-news-dashboard-refresh-fn",
+    "User-Agent": "watchlist-refresh-fn",
   };
 
   const runsUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=1`;

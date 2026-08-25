@@ -1,9 +1,9 @@
 // Shared fetch/summarize helpers used by both the daily job (fetch-news.mjs)
 // and the one-off historical backfill (backfill-history.mjs).
 
-export const GROQ_MODEL = "openai/gpt-oss-120b";
-export const REDDIT_USER_AGENT =
-  "web:company-news-dashboard:1.0 (by /u/company-news-dashboard-bot)";
+import Anthropic from "@anthropic-ai/sdk";
+
+export const CLAUDE_MODEL = "claude-sonnet-5";
 
 export function requireEnv(name) {
   const value = process.env[name];
@@ -102,77 +102,7 @@ export async function summarizeNews(companyName, articles, dayLabel = "today") {
 
   const prompt = `You are a financial news summarizer. Summarize the news about ${companyName} below in 3-4 concise sentences for a busy investor. Only use facts from the articles below. If articles are mixed/unrelated, focus on the ones actually about ${companyName}. Treat unverified claims, accusations, or allegations as allegations, not established fact - attribute them (e.g. "an article from X alleges..."), don't state them flatly. Output only the summary itself, with no preamble like "Here is a summary" and no closing remarks.\n\n${articleBlock}`;
 
-  return callGroq(prompt);
-}
-
-export async function fetchRedditToken() {
-  // Reddit credentials are optional: if the app registration hasn't been
-  // approved yet (Reddit has been gating self-serve app creation behind a
-  // support ticket for newer accounts), skip Reddit chatter entirely rather
-  // than failing the whole job.
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    console.log("  [info] Reddit credentials not set, skipping Reddit chatter.");
-    return null;
-  }
-
-  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-
-  const res = await fetch("https://www.reddit.com/api/v1/access_token", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent": REDDIT_USER_AGENT,
-    },
-    body: "grant_type=client_credentials",
-  });
-
-  if (!res.ok) {
-    console.log(`  [warn] Reddit auth failed: ${res.status}, skipping Reddit chatter.`);
-    return null;
-  }
-  const data = await res.json();
-  return data.access_token;
-}
-
-export async function fetchRedditChatter(companyName, token) {
-  if (!token) return [];
-
-  const url = new URL("https://oauth.reddit.com/search");
-  url.searchParams.set("q", companyName);
-  url.searchParams.set("sort", "new");
-  url.searchParams.set("t", "week");
-  url.searchParams.set("limit", "15");
-  url.searchParams.set("raw_json", "1");
-
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, "User-Agent": REDDIT_USER_AGENT },
-  });
-  if (!res.ok) {
-    console.log(`  [warn] Reddit search failed for "${companyName}": ${res.status}`);
-    return [];
-  }
-
-  const data = await res.json();
-  const nameLower = companyName.toLowerCase();
-  const posts = [];
-  for (const child of data.data?.children ?? []) {
-    const p = child.data;
-    const text = `${p.title} ${p.selftext ?? ""}`.toLowerCase();
-    if (!text.includes(nameLower)) continue;
-    posts.push({
-      title: p.title,
-      url: `https://reddit.com${p.permalink}`,
-      source_label: p.subreddit_name_prefixed,
-      score: p.score,
-      num_comments: p.num_comments,
-      snippet: (p.selftext ?? "").slice(0, 300),
-    });
-    if (posts.length >= 6) break;
-  }
-  return posts;
+  return callClaude(prompt);
 }
 
 export async function fetchStockTwitsChatter(companyName) {
@@ -225,49 +155,26 @@ export async function summarizeChatter(companyName, posts, dayLabel = "today") {
     .map((p, i) => `${i + 1}. [${p.source_label}] ${p.title}\n${p.snippet}`)
     .join("\n\n");
 
-  const prompt = `You are monitoring social media (Reddit and StockTwits) for chatter about ${companyName} - things like rumors, speculation about leadership changes, sentiment, or unconfirmed claims that have NOT been reported by official news outlets. This is explicitly NOT verified news. Summarize the chatter in 2-3 sentences. Every sentence must make clear this is unverified social media speculation, not fact (e.g. "Reddit users are speculating that...", "one post claims, without evidence, that..."). If the posts are generic/unrelated to ${companyName} specifically rather than containing real chatter about it, say that plainly instead of forcing a summary. Output only the summary itself, with no preamble and no closing remarks.\n\n${postBlock}`;
+  const prompt = `You are monitoring social media (StockTwits) for chatter about ${companyName} - things like rumors, speculation about leadership changes, sentiment, or unconfirmed claims that have NOT been reported by official news outlets. This is explicitly NOT verified news. Summarize the chatter in 2-3 sentences. Every sentence must make clear this is unverified social media speculation, not fact (e.g. "StockTwits users are speculating that...", "one post claims, without evidence, that..."). If the posts are generic/unrelated to ${companyName} specifically rather than containing real chatter about it, say that plainly instead of forcing a summary. Output only the summary itself, with no preamble and no closing remarks.\n\n${postBlock}`;
 
-  return callGroq(prompt);
+  return callClaude(prompt);
 }
 
-const GROQ_MAX_RETRIES = 4;
+let anthropicClient;
 
-function groqRetryDelayMs(status, body) {
-  if (status !== 429) return null;
-  const match = body.match(/try again in ([\d.]+)s/i);
-  const seconds = match ? parseFloat(match[1]) : 5;
-  return Math.ceil(seconds * 1000) + 500;
-}
+export async function callClaude(prompt) {
+  anthropicClient ??= new Anthropic({ apiKey: requireEnv("ANTHROPIC_API_KEY"), maxRetries: 4 });
 
-export async function callGroq(prompt) {
-  for (let attempt = 0; ; attempt++) {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${requireEnv("GROQ_API_KEY")}`,
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
-      }),
-    });
+  const message = await anthropicClient.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 1024,
+    output_config: { effort: "low" },
+    messages: [{ role: "user", content: prompt }],
+  });
 
-    if (res.ok) {
-      const data = await res.json();
-      return data.choices[0].message.content.trim();
-    }
-
-    const body = await res.text();
-    const retryDelay = groqRetryDelayMs(res.status, body);
-    if (retryDelay === null || attempt >= GROQ_MAX_RETRIES) {
-      throw new Error(`Groq error ${res.status}: ${body}`);
-    }
-
-    console.log(
-      `  [warn] Groq rate limited, retrying in ${Math.round(retryDelay / 1000)}s (attempt ${attempt + 1}/${GROQ_MAX_RETRIES})...`
-    );
-    await new Promise((resolve) => setTimeout(resolve, retryDelay));
-  }
+  return message.content
+    .filter((block) => block.type === "text")
+    .map((block) => block.text)
+    .join("")
+    .trim();
 }

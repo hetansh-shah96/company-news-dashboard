@@ -1,12 +1,10 @@
 // Daily job: for each active company, pull recent official news from
-// NewsData.io plus unverified social chatter from Reddit and StockTwits,
-// summarize both separately with Groq, and store the results in Supabase +
-// a local CSV backup.
+// NewsData.io plus unverified social chatter from StockTwits, summarize both
+// separately with Claude, and store the results in Supabase + a local CSV
+// backup.
 //
 // Required env vars (set as GitHub Actions secrets):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEWSDATA_API_KEY, GROQ_API_KEY
-// Optional (Reddit chatter is skipped gracefully if these aren't set):
-//   REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEWSDATA_API_KEY, ANTHROPIC_API_KEY
 
 import { createClient } from "@supabase/supabase-js";
 import { writeFile, mkdir } from "node:fs/promises";
@@ -16,8 +14,6 @@ import {
   istDateString,
   fetchArticles,
   summarizeNews,
-  fetchRedditToken,
-  fetchRedditChatter,
   fetchStockTwitsChatter,
   summarizeChatter,
 } from "./lib.mjs";
@@ -47,8 +43,6 @@ async function main() {
     return;
   }
 
-  const redditToken = await fetchRedditToken();
-
   const csvRows = [
     "run_date,company,summary,source_titles,chatter_summary,chatter_source_titles",
   ];
@@ -59,11 +53,7 @@ async function main() {
     const summary = await summarizeNews(company.name, articles);
 
     console.log(`Fetching social chatter for ${company.name}...`);
-    const [redditPosts, stockTwitsPosts] = await Promise.all([
-      fetchRedditChatter(company.name, redditToken),
-      fetchStockTwitsChatter(company.name),
-    ]);
-    const chatterPosts = [...redditPosts, ...stockTwitsPosts];
+    const chatterPosts = await fetchStockTwitsChatter(company.name);
     const chatterSummary = await summarizeChatter(company.name, chatterPosts);
 
     const { error: upsertError } = await supabase
