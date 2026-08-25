@@ -3,7 +3,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 
-export const CLAUDE_MODEL = "claude-sonnet-5";
+export const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 
 export function requireEnv(name) {
   const value = process.env[name];
