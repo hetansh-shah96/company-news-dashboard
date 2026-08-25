@@ -67,11 +67,13 @@ function chatterSectionHtml(row) {
     </div>`;
 }
 
+const CARD_REVEAL_STAGGER_MS = 45;
+
 function renderCompanies(companies, summariesByCompany) {
   app.innerHTML = '<div class="grid"></div>';
   const grid = app.querySelector(".grid");
 
-  for (const company of companies) {
+  for (const [index, company] of companies.entries()) {
     const summaries = summariesByCompany.get(company.id) ?? [];
     const latest = summaries[0];
     const history = summaries.slice(1);
@@ -125,8 +127,13 @@ function renderCompanies(companies, summariesByCompany) {
       ${footerHtml}
     `;
 
+    card.style.transitionDelay = `${index * CARD_REVEAL_STAGGER_MS}ms`;
     grid.appendChild(card);
   }
+
+  requestAnimationFrame(() => {
+    for (const card of grid.children) card.classList.add("in");
+  });
 }
 
 function setRefreshLabel(text, revertAfterMs) {
