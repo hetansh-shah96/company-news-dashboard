@@ -168,7 +168,6 @@ export async function callClaude(prompt) {
   const message = await anthropicClient.messages.create({
     model: CLAUDE_MODEL,
     max_tokens: 1024,
-    output_config: { effort: "low" },
     messages: [{ role: "user", content: prompt }],
   });
 
