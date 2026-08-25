@@ -78,7 +78,6 @@ function renderCompanies(companies, summariesByCompany) {
     const latest = summaries[0];
     const history = summaries.slice(1);
     const notableHistory = history.filter(hasContent);
-    const quietCount = history.length - notableHistory.length;
 
     const card = document.createElement("article");
     card.className = "company-card";
@@ -88,7 +87,6 @@ function renderCompanies(companies, summariesByCompany) {
           <summary>
             <span class="icon">history</span>
             ${notableHistory.length} notable day${notableHistory.length === 1 ? "" : "s"} in history
-            ${quietCount ? ` · ${quietCount} quiet` : ""}
           </summary>
           <div class="history-body">
             ${notableHistory
@@ -103,9 +101,7 @@ function renderCompanies(companies, summariesByCompany) {
               .join("")}
           </div>
         </details>`
-      : history.length
-        ? `<p class="quiet-note"><span class="icon">history</span> ${history.length} other day${history.length === 1 ? "" : "s"} had no notable news.</p>`
-        : "";
+      : "";
 
     card.innerHTML = `
       <div class="card-top">

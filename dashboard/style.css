@@ -407,15 +407,6 @@ main {
   font-size: 0.83rem;
 }
 
-.quiet-note {
-  padding: 0.6rem 1rem;
-  background: var(--accent-soft);
-  text-align: center;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-
 /* ---------- states ---------- */
 
 .loading,
