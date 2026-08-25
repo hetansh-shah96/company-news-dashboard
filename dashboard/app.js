@@ -7,8 +7,10 @@ const refreshBtn = document.getElementById("refreshBtn");
 const refreshBtnLabel = document.getElementById("refreshBtnLabel");
 const downloadBtn = document.getElementById("downloadBtn");
 
+const printReportEl = document.getElementById("printReport");
+
 let loadedCompanies = [];
-let loadedSummaries = [];
+let loadedSummariesByCompany = new Map();
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -191,45 +193,70 @@ async function triggerRefresh() {
 
 refreshBtn.addEventListener("click", triggerRefresh);
 
-function toCsvField(value) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
-}
+function reportCompanySectionHtml(company, summaries) {
+  const latest = summaries[0];
+  const history = summaries.slice(1).filter(hasContent);
 
-function downloadCsv() {
-  if (!loadedSummaries.length) return;
-
-  const companyNameById = new Map(loadedCompanies.map((c) => [c.id, c.name]));
-  const rows = [
-    ["run_date", "company", "summary", "source_titles", "chatter_summary", "chatter_source_titles"]
-      .map(toCsvField)
-      .join(","),
-  ];
-
-  for (const row of loadedSummaries) {
-    rows.push(
-      [
-        row.run_date,
-        companyNameById.get(row.company_id) ?? "",
-        row.summary,
-        (row.sources ?? []).map((s) => s.title).join(" | "),
-        row.chatter_summary,
-        (row.chatter_sources ?? []).map((s) => s.title).join(" | "),
-      ]
-        .map(toCsvField)
-        .join(",")
-    );
+  if (!latest) {
+    return `
+      <section class="report-company">
+        <h2>${escapeHtml(company.name)}</h2>
+        <p class="report-empty">No summary yet.</p>
+      </section>`;
   }
 
-  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `watchlist-export-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  const historyHtml = history.length
+    ? `<div class="report-history">
+        <p class="report-history-label">Earlier notable days</p>
+        ${history
+          .map(
+            (h) => `
+          <div class="report-history-item">
+            <time>${formatDate(h.run_date)}</time>
+            ${officialSectionHtml(h)}
+            ${chatterSectionHtml(h)}
+          </div>`
+          )
+          .join("")}
+      </div>`
+    : "";
+
+  return `
+    <section class="report-company">
+      <h2>${escapeHtml(company.name)}<time>Updated ${formatDate(latest.run_date)}</time></h2>
+      ${officialSectionHtml(latest)}
+      ${chatterSectionHtml(latest)}
+      ${historyHtml}
+    </section>`;
 }
 
-downloadBtn.addEventListener("click", downloadCsv);
+function downloadPdf() {
+  if (!loadedCompanies.length) return;
+
+  const generatedAt = new Date().toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  printReportEl.innerHTML = `
+    <header class="report-header">
+      <h1>Watchlist</h1>
+      <p>Daily Market Report · Generated ${generatedAt}</p>
+    </header>
+    ${loadedCompanies
+      .map((company) => reportCompanySectionHtml(company, loadedSummariesByCompany.get(company.id) ?? []))
+      .join("")}
+  `;
+
+  document.title = `Watchlist Report - ${new Date().toISOString().slice(0, 10)}`;
+  window.print();
+  document.title = "Watchlist";
+}
+
+downloadBtn.addEventListener("click", downloadPdf);
 
 async function load() {
   const { data: companies, error: companiesError } = await client
@@ -263,7 +290,6 @@ async function load() {
   }
 
   loadedCompanies = companies;
-  loadedSummaries = summaries;
 
   const summariesByCompany = new Map();
   for (const row of summaries) {
@@ -272,6 +298,8 @@ async function load() {
     }
     summariesByCompany.get(row.company_id).push(row);
   }
+
+  loadedSummariesByCompany = summariesByCompany;
 
   renderCompanies(companies, summariesByCompany);
 }
