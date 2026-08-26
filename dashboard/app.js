@@ -130,11 +130,22 @@ function renderCompanies(companies, summariesByCompany) {
           <h2>${escapeHtml(company.name)}</h2>
           ${latest ? `<time class="date">Updated: ${formatDate(latest.run_date)}</time>` : ""}
         </div>
-        ${
-          latest?.sources?.length
-            ? `<span class="count-badge">${latest.sources.length} source${latest.sources.length === 1 ? "" : "s"}</span>`
-            : ""
-        }
+        <div class="card-top-actions">
+          ${
+            latest?.sources?.length
+              ? `<span class="count-badge">${latest.sources.length} source${latest.sources.length === 1 ? "" : "s"}</span>`
+              : ""
+          }
+          <button
+            class="card-pdf-btn"
+            type="button"
+            data-company-id="${company.id}"
+            title="Download PDF for ${escapeHtml(company.name)}"
+            aria-label="Download PDF for ${escapeHtml(company.name)}"
+          >
+            <span class="icon">picture_as_pdf</span>
+          </button>
+        </div>
       </div>
       ${
         latest
@@ -230,8 +241,8 @@ function reportCompanySectionHtml(company, summaries) {
     </section>`;
 }
 
-function downloadPdf() {
-  if (!loadedCompanies.length) return;
+function buildAndPrintReport(companies, subtitle) {
+  if (!companies.length) return;
 
   const generatedAt = new Date().toLocaleString("en-IN", {
     day: "numeric",
@@ -244,19 +255,36 @@ function downloadPdf() {
   printReportEl.innerHTML = `
     <header class="report-header">
       <h1>Watchlist</h1>
-      <p>Daily Market Report · Generated ${generatedAt}</p>
+      <p>${subtitle} · Generated ${generatedAt}</p>
     </header>
-    ${loadedCompanies
+    ${companies
       .map((company) => reportCompanySectionHtml(company, loadedSummariesByCompany.get(company.id) ?? []))
       .join("")}
   `;
 
-  document.title = `Watchlist Report - ${new Date().toISOString().slice(0, 10)}`;
+  const titleSuffix = companies.length === 1 ? companies[0].name : "Report";
+  document.title = `Watchlist ${titleSuffix} - ${new Date().toISOString().slice(0, 10)}`;
   window.print();
   document.title = "Watchlist";
 }
 
+function downloadPdf() {
+  buildAndPrintReport(loadedCompanies, "Daily Market Report");
+}
+
+function downloadCompanyPdf(companyId) {
+  const company = loadedCompanies.find((c) => c.id === companyId);
+  if (!company) return;
+  buildAndPrintReport([company], `${company.name} Report`);
+}
+
 downloadBtn.addEventListener("click", downloadPdf);
+
+app.addEventListener("click", (event) => {
+  const btn = event.target.closest(".card-pdf-btn");
+  if (!btn) return;
+  downloadCompanyPdf(btn.dataset.companyId);
+});
 
 async function load() {
   const { data: companies, error: companiesError } = await client

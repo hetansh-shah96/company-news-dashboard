@@ -323,6 +323,37 @@ main {
   white-space: nowrap;
 }
 
+.card-top-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.card-pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.card-pdf-btn:hover {
+  background: var(--accent-vivid-soft);
+  border-color: var(--accent-vivid);
+  color: var(--accent-vivid);
+}
+
+.card-pdf-btn .icon {
+  font-size: 15px;
+}
+
 /* ---------- sections (official / chatter) ---------- */
 
 .section {
@@ -490,21 +521,12 @@ ul.summary li::before {
 }
 
 @media print {
-  body * {
-    visibility: hidden;
-  }
-
-  #printReport,
-  #printReport * {
-    visibility: visible;
+  body > *:not(#printReport) {
+    display: none !important;
   }
 
   #printReport {
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
     background: #ffffff;
     color: #191c1e;
   }
