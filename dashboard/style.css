@@ -563,7 +563,6 @@ ul.summary li::before {
 }
 
 .report-company {
-  break-inside: avoid;
   padding: 0.9rem 0;
   border-bottom: 1px solid #dcdfe2;
 }
@@ -581,6 +580,7 @@ ul.summary li::before {
   font-size: 1rem;
   font-weight: 700;
   color: #131b2e;
+  break-after: avoid;
 }
 
 .report-company h2 time {
@@ -594,6 +594,7 @@ ul.summary li::before {
   margin-bottom: 0.6rem;
   padding-left: 0.7rem;
   border-left: 2px solid #dcdfe2;
+  break-inside: avoid;
 }
 
 .report-company .chatter-block {
