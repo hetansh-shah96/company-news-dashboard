@@ -26,6 +26,11 @@ runs the fetch daily at 8:55 AM IST.
 - **`supabase/functions/refresh-news`** — Edge Function behind the dashboard's "Refresh news"
   button. Holds the GitHub PAT server-side, enforces a 15-minute cooldown (by checking the
   workflow's own run history), and dispatches `daily-news.yml` via `workflow_dispatch` on demand.
+- **`supabase/functions/manage-companies`** — Edge Function behind the "Manage" panel. Holds the
+  `service_role` key server-side so the dashboard's anon key stays read-only; adds/deactivates
+  companies on request.
+- **`supabase/functions/chat`** — Edge Function behind the floating chat button. Holds
+  `GROQ_API_KEY` server-side and proxies to Groq's chat completions endpoint.
 
 ## Dashboard features
 
@@ -37,7 +42,16 @@ runs the fetch daily at 8:55 AM IST.
 - **"Download PDF" button.** Builds a print-only view (`#printReport` in `index.html`) mirroring
   the dashboard's own cards — brand header, per-company sections, plain-text source citations —
   and calls `window.print()` so "Save as PDF" produces an actual shareable report instead of a
-  raw CSV dump.
+  raw CSV dump. Each company card also has its own small PDF button for a single-company report.
+- **"Manage" button.** Add or remove tracked companies from the dashboard itself — no need to
+  touch Supabase directly. "Remove" deactivates (`active = false`) rather than deletes, so
+  historical summaries for that company are kept; re-adding the same name reactivates it.
+  **No login gate** — this is intentional for the current beta (the dashboard link isn't shared
+  publicly), but anyone with the link can edit the company list. Revisit before a public launch.
+- **Chat button (bottom-right).** A general-purpose assistant backed by Groq
+  (`llama-3.3-70b-versatile`), not connected to the dashboard's stored data — just a chat widget.
+  Also unauthenticated; the Edge Function caps message count/length and `max_tokens` to keep
+  potential abuse cheap rather than gating by login.
 
 ## One-time setup
 
@@ -84,13 +98,33 @@ Pages pointed at `dashboard/`. Takes under a minute and gives you a shareable UR
 
 ## Adding more companies
 
-Insert a row into the `companies` table in Supabase (via the table editor or SQL):
+Easiest: use the dashboard's "Manage" button. Or insert a row into the `companies` table in
+Supabase directly (via the table editor or SQL):
 
 ```sql
 insert into companies (name, search_query) values ('Tata Motors', 'Tata Motors');
 ```
 
-It'll be picked up automatically on the next daily run — no code changes needed.
+Either way, it's picked up automatically on the next daily run — no code changes needed.
+
+## Deploying the Edge Functions
+
+From the repo root, with the [Supabase CLI](https://supabase.com/docs/guides/cli) (or `npx supabase`):
+
+```
+npx supabase functions deploy refresh-news --project-ref <your-project-ref> --no-verify-jwt
+npx supabase functions deploy manage-companies --project-ref <your-project-ref> --no-verify-jwt
+npx supabase functions deploy chat --project-ref <your-project-ref> --no-verify-jwt
+```
+
+`refresh-news` and `manage-companies` read `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`, which
+Supabase injects into every Edge Function automatically. `refresh-news` also needs a `GITHUB_PAT`
+secret (repo `actions` scope), and `chat` needs `GROQ_API_KEY`:
+
+```
+npx supabase secrets set GITHUB_PAT=... --project-ref <your-project-ref>
+npx supabase secrets set GROQ_API_KEY=... --project-ref <your-project-ref>
+```
 
 ## Offline backup
 
