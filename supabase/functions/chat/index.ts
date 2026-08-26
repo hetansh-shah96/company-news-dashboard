@@ -6,13 +6,17 @@
 const GROQ_MODEL = "openai/gpt-oss-120b";
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_LEN = 4000;
+const MAX_CONTEXT_LEN = 12000;
 const MAX_TOKENS = 800;
 
 const SYSTEM_PROMPT =
   "You are a helpful, concise assistant embedded in the Watchlist dashboard, a tool that tracks " +
-  "daily news and social chatter for a list of companies. You can help with general questions, " +
-  "but you do not have direct access to the dashboard's stored data - if asked about specific " +
-  "company summaries, say so and suggest checking the dashboard cards directly.";
+  "daily news and social chatter for a list of companies. Official news and social chatter are " +
+  "two distinct kinds of information - chatter is unverified speculation, never state it as fact. " +
+  "You may be given a snapshot of the dashboard's current data below; treat it as what's visible " +
+  "right now, not a live feed - it can be stale or incomplete, and you have no way to fetch more " +
+  "of it yourself. If asked about something not covered in the snapshot, say so plainly rather " +
+  "than guessing.";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -40,12 +44,17 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Server misconfigured: missing GROQ_API_KEY" }, 500);
   }
 
-  let body: { messages?: { role: string; content: string }[] };
+  let body: { messages?: { role: string; content: string }[]; context?: string };
   try {
     body = await req.json();
   } catch {
     return jsonResponse({ error: "Invalid JSON body" }, 400);
   }
+
+  if (body.context !== undefined && typeof body.context !== "string") {
+    return jsonResponse({ error: "context must be a string" }, 400);
+  }
+  const context = (body.context ?? "").slice(0, MAX_CONTEXT_LEN);
 
   const messages = body.messages ?? [];
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -66,6 +75,10 @@ Deno.serve(async (req) => {
     }
   }
 
+  const systemContent = context
+    ? `${SYSTEM_PROMPT}\n\n--- Dashboard snapshot ---\n${context}`
+    : SYSTEM_PROMPT;
+
   const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -75,7 +88,7 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       model: GROQ_MODEL,
       max_tokens: MAX_TOKENS,
-      messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+      messages: [{ role: "system", content: systemContent }, ...messages],
     }),
   });
 

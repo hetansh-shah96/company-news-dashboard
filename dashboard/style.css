@@ -896,6 +896,31 @@ ul.summary li::before {
   border: 1px solid var(--border);
 }
 
+.chat-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.chat-suggestion-btn {
+  align-self: flex-start;
+  max-width: 90%;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--accent-vivid);
+  font-family: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-suggestion-btn:hover {
+  background: var(--accent-vivid-soft);
+  border-color: var(--accent-vivid);
+}
+
 .chat-form {
   display: flex;
   align-items: center;

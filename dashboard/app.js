@@ -456,6 +456,29 @@ manageList.addEventListener("click", async (event) => {
 
 let chatHistory = [];
 
+const CHAT_SUGGESTIONS = [
+  "Any major news today?",
+  "Summarize today's chatter across all companies",
+  "Which company has the most unverified rumors right now?",
+  "Any risky or notable allegations to flag?",
+];
+
+function buildDashboardContext() {
+  if (!loadedCompanies.length) return "";
+
+  return loadedCompanies
+    .map((company) => {
+      const latest = (loadedSummariesByCompany.get(company.id) ?? [])[0];
+      if (!latest) return `${company.name}: no summary yet.`;
+      return (
+        `${company.name} (updated ${latest.run_date}):\n` +
+        `  Official news: ${latest.summary}\n` +
+        `  Social chatter (unverified): ${latest.chatter_summary ?? "none"}`
+      );
+    })
+    .join("\n\n");
+}
+
 function appendChatMessage(role, text) {
   const bubble = document.createElement("div");
   bubble.className = `chat-message chat-message-${role}`;
@@ -465,27 +488,21 @@ function appendChatMessage(role, text) {
   return bubble;
 }
 
-function openChat() {
-  chatPanel.classList.remove("hidden");
-  chatInput.focus();
+function renderChatSuggestions() {
+  const wrap = document.createElement("div");
+  wrap.className = "chat-suggestions";
+  wrap.innerHTML = CHAT_SUGGESTIONS.map(
+    (s) => `<button type="button" class="chat-suggestion-btn">${escapeHtml(s)}</button>`
+  ).join("");
+  chatMessages.appendChild(wrap);
 }
 
-function closeChat() {
-  chatPanel.classList.add("hidden");
+function clearChatSuggestions() {
+  chatMessages.querySelector(".chat-suggestions")?.remove();
 }
 
-chatToggleBtn.addEventListener("click", () => {
-  if (chatPanel.classList.contains("hidden")) openChat();
-  else closeChat();
-});
-chatCloseBtn.addEventListener("click", closeChat);
-
-chatForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const text = chatInput.value.trim();
-  if (!text) return;
-
-  chatInput.value = "";
+async function sendChatMessage(text) {
+  clearChatSuggestions();
   chatInput.disabled = true;
   appendChatMessage("user", text);
   chatHistory.push({ role: "user", content: text });
@@ -499,7 +516,7 @@ chatForm.addEventListener("submit", async (event) => {
         Authorization: `Bearer ${window.SUPABASE_CONFIG.anonKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ messages: chatHistory.slice(-20) }),
+      body: JSON.stringify({ messages: chatHistory.slice(-20), context: buildDashboardContext() }),
     });
     const data = await res.json().catch(() => ({}));
 
@@ -516,6 +533,36 @@ chatForm.addEventListener("submit", async (event) => {
     chatInput.disabled = false;
     chatInput.focus();
   }
+}
+
+function openChat() {
+  chatPanel.classList.remove("hidden");
+  if (!chatHistory.length) renderChatSuggestions();
+  chatInput.focus();
+}
+
+function closeChat() {
+  chatPanel.classList.add("hidden");
+}
+
+chatToggleBtn.addEventListener("click", () => {
+  if (chatPanel.classList.contains("hidden")) openChat();
+  else closeChat();
+});
+chatCloseBtn.addEventListener("click", closeChat);
+
+chatMessages.addEventListener("click", (event) => {
+  const btn = event.target.closest(".chat-suggestion-btn");
+  if (!btn) return;
+  sendChatMessage(btn.textContent);
+});
+
+chatForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const text = chatInput.value.trim();
+  if (!text) return;
+  chatInput.value = "";
+  sendChatMessage(text);
 });
 
 load();
