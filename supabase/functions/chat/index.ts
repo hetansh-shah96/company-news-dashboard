@@ -3,7 +3,7 @@
 // endpoint is unauthenticated (anyone with the dashboard link can use it),
 // input is capped here to keep cost/abuse bounded - this is a system
 // boundary, not a user identity gate.
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_MODEL = "openai/gpt-oss-120b";
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_LEN = 4000;
 const MAX_TOKENS = 800;
