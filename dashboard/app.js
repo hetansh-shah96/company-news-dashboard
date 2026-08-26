@@ -479,10 +479,44 @@ function buildDashboardContext() {
     .join("\n\n");
 }
 
+// The model is told not to use Markdown, but instruction-following isn't
+// airtight - clean up common leftovers defensively rather than trusting it.
+// Builds real DOM nodes (never innerHTML with model output) so this can't
+// become an injection vector.
+function stripMarkdownArtifacts(text) {
+  return text
+    .split("\n")
+    .map((line) => {
+      if (/^[\s|:-]+$/.test(line) && line.includes("-")) return ""; // table separator row
+      return line
+        .replace(/^#{1,6}\s+/, "") // headers
+        .replace(/^\s*\|\s?/, "") // leading table pipe
+        .replace(/\s?\|\s*$/, "") // trailing table pipe
+        .replace(/\s*\|\s*/g, "  "); // inner table pipes
+    })
+    .join("\n");
+}
+
+function renderMessageText(container, text) {
+  container.textContent = "";
+  const clean = stripMarkdownArtifacts(text);
+  const parts = clean.split(/\*\*(.+?)\*\*/g);
+  parts.forEach((part, i) => {
+    if (!part) return;
+    if (i % 2 === 1) {
+      const strong = document.createElement("strong");
+      strong.textContent = part;
+      container.appendChild(strong);
+    } else {
+      container.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
 function appendChatMessage(role, text) {
   const bubble = document.createElement("div");
   bubble.className = `chat-message chat-message-${role}`;
-  bubble.textContent = text;
+  renderMessageText(bubble, text);
   chatMessages.appendChild(bubble);
   chatMessages.scrollTop = chatMessages.scrollHeight;
   return bubble;
@@ -521,14 +555,14 @@ async function sendChatMessage(text) {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      pending.textContent = data.error ?? "Something went wrong. Please try again.";
+      renderMessageText(pending, data.error ?? "Something went wrong. Please try again.");
       return;
     }
 
-    pending.textContent = data.reply;
+    renderMessageText(pending, data.reply);
     chatHistory.push({ role: "assistant", content: data.reply });
   } catch {
-    pending.textContent = "Couldn't reach the assistant - check your connection.";
+    renderMessageText(pending, "Couldn't reach the assistant - check your connection.");
   } finally {
     chatInput.disabled = false;
     chatInput.focus();
