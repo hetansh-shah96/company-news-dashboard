@@ -686,3 +686,232 @@ ul.summary li::before {
   font-family: var(--font-mono);
   color: #6b6d73;
 }
+
+/* ---------- shared utility ---------- */
+
+.hidden {
+  display: none !important;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--accent-vivid-soft);
+  color: var(--accent-vivid);
+}
+
+.icon-btn .icon {
+  font-size: 18px;
+}
+
+/* ---------- manage companies modal ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 100;
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-hover);
+  padding: 1.25rem;
+  gap: 0.9rem;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.add-company-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.add-company-form input {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.add-company-form button {
+  flex: none;
+}
+
+.manage-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #ba1a1a;
+}
+
+.manage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.manage-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.manage-list li:hover {
+  background: var(--card-header-bg);
+}
+
+/* ---------- chat widget ---------- */
+
+.chat-toggle-btn {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent-vivid);
+  color: #ffffff;
+  box-shadow: var(--shadow-hover);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+}
+
+.chat-toggle-btn .icon {
+  font-size: 24px;
+}
+
+.chat-toggle-btn:hover {
+  filter: brightness(1.08);
+}
+
+.chat-panel {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 5.2rem;
+  width: min(340px, calc(100vw - 3rem));
+  height: min(460px, calc(100vh - 8rem));
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-hover);
+  overflow: hidden;
+  z-index: 90;
+}
+
+.chat-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.9rem;
+  background: var(--card-header-bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-message {
+  max-width: 85%;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.chat-message-user {
+  align-self: flex-end;
+  background: var(--accent-vivid);
+  color: #ffffff;
+}
+
+.chat-message-assistant {
+  align-self: flex-start;
+  background: var(--card-header-bg);
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+
+.chat-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.85rem;
+}

@@ -22,6 +22,10 @@
           <span class="icon">picture_as_pdf</span>
           <span>Download PDF</span>
         </button>
+        <button id="manageBtn" class="refresh-btn" type="button">
+          <span class="icon">tune</span>
+          <span>Manage</span>
+        </button>
         <button id="refreshBtn" class="refresh-btn" type="button">
           <span class="icon">refresh</span>
           <span id="refreshBtnLabel">Refresh news</span>
@@ -29,6 +33,27 @@
       </div>
     </div>
   </header>
+
+  <div id="manageModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Manage companies</h3>
+        <button id="manageCloseBtn" class="icon-btn" type="button" aria-label="Close">
+          <span class="icon">close</span>
+        </button>
+      </div>
+      <form id="addCompanyForm" class="add-company-form">
+        <input id="addCompanyName" type="text" placeholder="Company name" maxlength="80" required />
+        <input id="addCompanyQuery" type="text" placeholder="Search query (optional)" maxlength="80" />
+        <button type="submit" class="refresh-btn">
+          <span class="icon">add</span>
+          <span>Add</span>
+        </button>
+      </form>
+      <p id="manageError" class="manage-error hidden"></p>
+      <ul id="manageList" class="manage-list"></ul>
+    </div>
+  </div>
 
   <main>
     <div class="page-intro">
@@ -41,6 +66,25 @@
   </main>
 
   <div id="printReport"></div>
+
+  <button id="chatToggleBtn" class="chat-toggle-btn" type="button" aria-label="Open assistant chat">
+    <span class="icon">chat</span>
+  </button>
+  <div id="chatPanel" class="chat-panel hidden">
+    <div class="chat-panel-header">
+      <span>Assistant</span>
+      <button id="chatCloseBtn" class="icon-btn" type="button" aria-label="Close chat">
+        <span class="icon">close</span>
+      </button>
+    </div>
+    <div id="chatMessages" class="chat-messages"></div>
+    <form id="chatForm" class="chat-form">
+      <input id="chatInput" type="text" placeholder="Ask something…" autocomplete="off" maxlength="4000" />
+      <button type="submit" class="icon-btn" aria-label="Send">
+        <span class="icon">send</span>
+      </button>
+    </form>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>

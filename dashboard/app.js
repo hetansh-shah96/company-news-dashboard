@@ -9,6 +9,22 @@ const downloadBtn = document.getElementById("downloadBtn");
 
 const printReportEl = document.getElementById("printReport");
 
+const manageBtn = document.getElementById("manageBtn");
+const manageModal = document.getElementById("manageModal");
+const manageCloseBtn = document.getElementById("manageCloseBtn");
+const addCompanyForm = document.getElementById("addCompanyForm");
+const addCompanyName = document.getElementById("addCompanyName");
+const addCompanyQuery = document.getElementById("addCompanyQuery");
+const manageList = document.getElementById("manageList");
+const manageError = document.getElementById("manageError");
+
+const chatToggleBtn = document.getElementById("chatToggleBtn");
+const chatPanel = document.getElementById("chatPanel");
+const chatCloseBtn = document.getElementById("chatCloseBtn");
+const chatMessages = document.getElementById("chatMessages");
+const chatForm = document.getElementById("chatForm");
+const chatInput = document.getElementById("chatInput");
+
 let loadedCompanies = [];
 let loadedSummariesByCompany = new Map();
 
@@ -330,6 +346,176 @@ async function load() {
   loadedSummariesByCompany = summariesByCompany;
 
   renderCompanies(companies, summariesByCompany);
+  renderManageList();
 }
+
+function renderManageList() {
+  manageList.innerHTML = loadedCompanies
+    .map(
+      (c) => `
+        <li>
+          <span>${escapeHtml(c.name)}</span>
+          <button class="icon-btn manage-remove-btn" type="button" data-company-id="${c.id}" aria-label="Remove ${escapeHtml(c.name)}">
+            <span class="icon">delete</span>
+          </button>
+        </li>`
+    )
+    .join("");
+}
+
+function showManageError(message) {
+  manageError.textContent = message;
+  manageError.classList.remove("hidden");
+}
+
+function openManageModal() {
+  manageError.classList.add("hidden");
+  manageModal.classList.remove("hidden");
+  addCompanyName.focus();
+}
+
+function closeManageModal() {
+  manageModal.classList.add("hidden");
+}
+
+manageBtn.addEventListener("click", openManageModal);
+manageCloseBtn.addEventListener("click", closeManageModal);
+manageModal.addEventListener("click", (event) => {
+  if (event.target === manageModal) closeManageModal();
+});
+
+addCompanyForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  manageError.classList.add("hidden");
+
+  const name = addCompanyName.value.trim();
+  if (!name) return;
+
+  const submitBtn = addCompanyForm.querySelector("button[type=submit]");
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch(`${window.SUPABASE_CONFIG.url}/functions/v1/manage-companies`, {
+      method: "POST",
+      headers: {
+        apikey: window.SUPABASE_CONFIG.anonKey,
+        Authorization: `Bearer ${window.SUPABASE_CONFIG.anonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "add",
+        name,
+        search_query: addCompanyQuery.value.trim() || undefined,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      showManageError(data.error ?? "Failed to add company");
+      return;
+    }
+
+    addCompanyForm.reset();
+    await load();
+  } catch {
+    showManageError("Failed to add company - check your connection");
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+manageList.addEventListener("click", async (event) => {
+  const btn = event.target.closest(".manage-remove-btn");
+  if (!btn) return;
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${window.SUPABASE_CONFIG.url}/functions/v1/manage-companies`, {
+      method: "POST",
+      headers: {
+        apikey: window.SUPABASE_CONFIG.anonKey,
+        Authorization: `Bearer ${window.SUPABASE_CONFIG.anonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action: "remove", id: btn.dataset.companyId }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      showManageError(data.error ?? "Failed to remove company");
+      btn.disabled = false;
+      return;
+    }
+
+    await load();
+  } catch {
+    showManageError("Failed to remove company - check your connection");
+    btn.disabled = false;
+  }
+});
+
+let chatHistory = [];
+
+function appendChatMessage(role, text) {
+  const bubble = document.createElement("div");
+  bubble.className = `chat-message chat-message-${role}`;
+  bubble.textContent = text;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+
+function openChat() {
+  chatPanel.classList.remove("hidden");
+  chatInput.focus();
+}
+
+function closeChat() {
+  chatPanel.classList.add("hidden");
+}
+
+chatToggleBtn.addEventListener("click", () => {
+  if (chatPanel.classList.contains("hidden")) openChat();
+  else closeChat();
+});
+chatCloseBtn.addEventListener("click", closeChat);
+
+chatForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  chatInput.value = "";
+  chatInput.disabled = true;
+  appendChatMessage("user", text);
+  chatHistory.push({ role: "user", content: text });
+  const pending = appendChatMessage("assistant", "…");
+
+  try {
+    const res = await fetch(`${window.SUPABASE_CONFIG.url}/functions/v1/chat`, {
+      method: "POST",
+      headers: {
+        apikey: window.SUPABASE_CONFIG.anonKey,
+        Authorization: `Bearer ${window.SUPABASE_CONFIG.anonKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ messages: chatHistory.slice(-20) }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      pending.textContent = data.error ?? "Something went wrong. Please try again.";
+      return;
+    }
+
+    pending.textContent = data.reply;
+    chatHistory.push({ role: "assistant", content: data.reply });
+  } catch {
+    pending.textContent = "Couldn't reach the assistant - check your connection.";
+  } finally {
+    chatInput.disabled = false;
+    chatInput.focus();
+  }
+});
 
 load();
