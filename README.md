@@ -49,7 +49,7 @@ runs the fetch daily at 8:55 AM IST.
   **No login gate** — this is intentional for the current beta (the dashboard link isn't shared
   publicly), but anyone with the link can edit the company list. Revisit before a public launch.
 - **Chat button (bottom-right).** A general-purpose assistant backed by Groq
-  (`llama-3.3-70b-versatile`), not connected to the dashboard's stored data — just a chat widget.
+  (`openai/gpt-oss-120b`), not connected to the dashboard's stored data — just a chat widget.
   Also unauthenticated; the Edge Function caps message count/length and `max_tokens` to keep
   potential abuse cheap rather than gating by login.
 
@@ -162,3 +162,12 @@ each run costs roughly 1 credit per company.
   `claude-haiku-4-5-20251001` — current guidance is to use the bare id for current-generation
   models; a dated variant was tried briefly here and swapped back before it could be confirmed
   as the cause of anything (the real bug both times was the `effort` param above).
+- **Groq's hosted model lineup changes often.** `GROQ_MODEL` in `supabase/functions/chat/index.ts`
+  is hardcoded; if the chat widget starts returning `model_not_found` (404), list what's actually
+  available with your key and pick a current chat model (not a `whisper-*` speech-to-text model,
+  `*-orpheus-*` text-to-speech model, or `*-prompt-guard-*` classifier — those aren't chat models):
+  ```powershell
+  $key = "gsk_..."
+  (Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" -Headers @{ Authorization = "Bearer $key" }).data.id
+  ```
+  Then update `GROQ_MODEL` and redeploy: `npx supabase functions deploy chat --project-ref <ref> --no-verify-jwt`.
