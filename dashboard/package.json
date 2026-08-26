@@ -1,0 +1,15 @@
+{
+  "name": "company-news-dashboard",
+  "version": "1.0.0",
+  "description": "Daily company news dashboard with official news and social chatter",
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'No build needed for static site'",
+    "lint": "echo 'No linter configured'"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.4.1"
+  },
+  "private": true
+}
