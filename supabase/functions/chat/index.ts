@@ -16,7 +16,11 @@ const SYSTEM_PROMPT =
   "You may be given a snapshot of the dashboard's current data below; treat it as what's visible " +
   "right now, not a live feed - it can be stale or incomplete, and you have no way to fetch more " +
   "of it yourself. If asked about something not covered in the snapshot, say so plainly rather " +
-  "than guessing.";
+  "than guessing.\n\n" +
+  "Your replies are shown as plain text, not rendered Markdown - do not use any Markdown syntax " +
+  "(no **bold**, no # headers, no | tables, no [links](url)). For structure, use plain line " +
+  "breaks and simple dashes for lists, e.g. '- like this'. Write company names and numbers as " +
+  "plain text.";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
