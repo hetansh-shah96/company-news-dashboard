@@ -555,7 +555,11 @@ async function sendChatMessage(text) {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      renderMessageText(pending, data.error ?? "Something went wrong. Please try again.");
+      const suffix =
+        res.status === 429 && data.retryAfterSeconds
+          ? ` (try again in ~${Math.ceil(data.retryAfterSeconds)}s)`
+          : "";
+      renderMessageText(pending, (data.error ?? "Something went wrong. Please try again.") + suffix);
       return;
     }
 

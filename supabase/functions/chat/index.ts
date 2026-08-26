@@ -96,6 +96,18 @@ Deno.serve(async (req) => {
     }),
   });
 
+  if (groqRes.status === 429) {
+    await groqRes.body?.cancel();
+    const retryAfterSeconds = Number(groqRes.headers.get("retry-after"));
+    return jsonResponse(
+      {
+        error: "The assistant is busy right now - please try again in a moment.",
+        retryAfterSeconds: Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : undefined,
+      },
+      429
+    );
+  }
+
   if (!groqRes.ok) {
     const detail = await groqRes.text();
     return jsonResponse({ error: `Groq API error ${groqRes.status}`, detail }, 502);
