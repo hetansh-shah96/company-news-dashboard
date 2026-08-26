@@ -48,10 +48,14 @@ runs the fetch daily at 8:55 AM IST.
   historical summaries for that company are kept; re-adding the same name reactivates it.
   **No login gate** — this is intentional for the current beta (the dashboard link isn't shared
   publicly), but anyone with the link can edit the company list. Revisit before a public launch.
-- **Chat button (bottom-right).** A general-purpose assistant backed by Groq
-  (`openai/gpt-oss-120b`), not connected to the dashboard's stored data — just a chat widget.
-  Also unauthenticated; the Edge Function caps message count/length and `max_tokens` to keep
-  potential abuse cheap rather than gating by login.
+- **Chat button (bottom-right).** An assistant backed by Groq (`openai/gpt-oss-120b`). Each
+  message is sent along with a snapshot of the dashboard's currently-loaded data (latest official
+  news + chatter per company, built client-side from what's already loaded for the cards — no
+  extra query), so it can answer questions like "any major news today?" grounded in what's
+  actually on screen. It's a snapshot, not a live feed — stale or off-screen data won't be seen,
+  and it says so rather than guessing. Four suggested prompts appear until the first message is
+  sent. Also unauthenticated; the Edge Function caps message count/length, context size, and
+  `max_tokens` to keep potential abuse cheap rather than gating by login.
 
 ## One-time setup
 
