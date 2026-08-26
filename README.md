@@ -7,7 +7,7 @@ Daily summaries for tracked companies, split into two clearly separate kinds:
   semantically kept apart from the official summary so the two are never confused.
 
 Both are summarized by Claude and shown on a simple browser dashboard. A GitHub Actions cron job
-runs the fetch daily at 6:00 PM IST.
+runs the fetch daily at 8:55 AM IST.
 
 ## How it fits together
 
@@ -16,7 +16,7 @@ runs the fetch daily at 6:00 PM IST.
 - **`scripts/fetch-news.mjs`** — the daily job. Pulls news from NewsData.io and chatter from
   StockTwits, summarizes both separately with Claude, writes to Supabase, and writes a CSV
   backup to `data/`.
-- **`.github/workflows/daily-news.yml`** — runs the script daily at 6 PM IST and commits the CSV
+- **`.github/workflows/daily-news.yml`** — runs the script daily at 8:55 AM IST and commits the CSV
   backup to this repo (so you always have an offline copy in git history, even if Supabase has
   an issue).
 - **`dashboard/`** — static HTML/JS page that reads from Supabase and displays the latest +
@@ -33,7 +33,7 @@ runs the fetch daily at 6:00 PM IST.
   instead of a paragraph — easier to scan. Older paragraph-style rows (from before this format)
   still render fine via a fallback in `summaryBlockHtml()`.
 - **"Refresh news" button.** Manually triggers the daily job on demand instead of waiting for the
-  6 PM IST cron. Rate-limited to once per 15 minutes by the Edge Function.
+  8:55 AM IST cron. Rate-limited to once per 15 minutes by the Edge Function.
 - **"Download PDF" button.** Builds a print-only view (`#printReport` in `index.html`) mirroring
   the dashboard's own cards — brand header, per-company sections, plain-text source citations —
   and calls `window.print()` so "Save as PDF" produces an actual shareable report instead of a
@@ -75,7 +75,7 @@ Edit `dashboard/config.js` and fill in your Supabase URL + anon key.
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `NEWSDATA_API_KEY`
    - `ANTHROPIC_API_KEY`
-3. The workflow runs automatically every day at 6 PM IST. You can also trigger it manually from
+3. The workflow runs automatically every day at 8:55 AM IST. You can also trigger it manually from
    the Actions tab ("Run workflow") to test it immediately.
 
 ### 6. Host the dashboard (optional but recommended)

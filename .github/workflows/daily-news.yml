@@ -2,8 +2,8 @@ name: Watchlist daily fetch
 
 on:
   schedule:
-    # 12:30 UTC = 18:00 IST
-    - cron: "30 12 * * *"
+    # 03:25 UTC = 08:55 IST
+    - cron: "25 3 * * *"
   workflow_dispatch: {}
 
 permissions:
