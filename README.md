@@ -6,8 +6,9 @@ Daily summaries for tracked companies, split into two clearly separate kinds:
 - **Social chatter (unverified)** — rumors/speculation/sentiment from StockTwits, visually and
   semantically kept apart from the official summary so the two are never confused.
 
-Both are summarized by Claude and shown on a simple browser dashboard. A GitHub Actions cron job
-runs the fetch daily at 8:55 AM IST.
+Both are summarized by Claude and shown on a simple browser dashboard. A Vercel Cron Job triggers
+the fetch daily at 8:55 AM IST (see "Daily trigger" below for why it's not GitHub Actions' own
+`schedule:` trigger).
 
 ## How it fits together
 
@@ -16,9 +17,13 @@ runs the fetch daily at 8:55 AM IST.
 - **`scripts/fetch-news.mjs`** — the daily job. Pulls news from NewsData.io and chatter from
   StockTwits, summarizes both separately with Claude, writes to Supabase, and writes a CSV
   backup to `data/`.
-- **`.github/workflows/daily-news.yml`** — runs the script daily at 8:55 AM IST and commits the CSV
-  backup to this repo (so you always have an offline copy in git history, even if Supabase has
-  an issue).
+- **`.github/workflows/daily-news.yml`** — runs the script and commits the CSV backup to this repo
+  (so you always have an offline copy in git history, even if Supabase has an issue). Only has a
+  `workflow_dispatch` trigger, no `schedule:` — see "Daily trigger" below.
+- **`dashboard/api/cron-refresh.js`** + **`dashboard/vercel.json`** — a Vercel Cron Job (`vercel.json`)
+  that hits this serverless function daily at 8:55 AM IST; the function just calls
+  `refresh-news` (below), the same Edge Function the dashboard's own button calls. This is what
+  actually triggers `daily-news.yml` on a schedule now.
 - **`dashboard/`** — static HTML/JS page that reads from Supabase and displays the latest +
   historical summaries per company, with chatter shown in a distinct "Unverified" box. No build
   step; open `index.html` directly or host it anywhere static (GitHub Pages, Vercel, Netlify).
@@ -93,12 +98,29 @@ Edit `dashboard/config.js` and fill in your Supabase URL + anon key.
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `NEWSDATA_API_KEY`
    - `ANTHROPIC_API_KEY`
-3. The workflow runs automatically every day at 8:55 AM IST. You can also trigger it manually from
-   the Actions tab ("Run workflow") to test it immediately.
+3. This workflow no longer triggers itself on a schedule — set up the Vercel Cron Job in the next
+   step to get the daily 8:55 AM IST run. You can still trigger it manually from the Actions tab
+   ("Run workflow") to test it immediately.
 
 ### 6. Host the dashboard (optional but recommended)
 Since it's static files, drag the `dashboard/` folder onto Vercel or Netlify, or enable GitHub
 Pages pointed at `dashboard/`. Takes under a minute and gives you a shareable URL.
+
+### 7. Daily trigger (Vercel Cron)
+Only applies if you hosted on Vercel with Root Directory set to `dashboard/` (step 6). Vercel
+picks up `dashboard/vercel.json` automatically — no dashboard setup needed beyond deploying.
+Confirm it's live under the project's **Settings → Cron Jobs** tab; it'll show the next run time
+for `/api/cron-refresh`.
+
+Optional hardening: set a `CRON_SECRET` env var on the Vercel project (any random string) —
+`api/cron-refresh.js` checks for it if present, rejecting requests without a matching
+`Authorization: Bearer <secret>` header. Vercel sends this header automatically on cron-triggered
+requests, so no other config is needed once the env var exists.
+
+If you hosted the dashboard elsewhere (Netlify, GitHub Pages), there's no cron function to deploy
+— either add an equivalent scheduled job on that platform to call the `refresh-news` Edge Function
+(see `dashboard/api/cron-refresh.js` for the exact request), or fall back to clicking the
+dashboard's "Refresh news" button manually.
 
 ## Adding more companies
 
@@ -151,6 +173,17 @@ each run costs roughly 1 credit per company.
 
 ## Gotchas / troubleshooting
 
+- **GitHub Actions' `schedule:` trigger is not reliable enough to depend on.** It was originally
+  used directly on `daily-news.yml` (first at 18:00 IST, then moved to 08:55 IST on 2026-08-26).
+  Checking the actual run history via the GitHub API showed every `schedule`-triggered run landing
+  10-11+ hours after its configured time, with the delay growing day over day, until one day it
+  didn't fire at all. This is a documented GitHub limitation (scheduled runs are best-effort and
+  get deprioritized under load, especially on lower-traffic repos), not a bug in the workflow
+  config. Fix: `daily-news.yml` now only has a `workflow_dispatch` trigger; a Vercel Cron Job
+  (`dashboard/vercel.json` + `dashboard/api/cron-refresh.js`) calls it on schedule instead, via the
+  same `refresh-news` Edge Function the dashboard's manual button uses. If the dashboard ever moves
+  off Vercel, this trigger needs an equivalent replacement (see "Daily trigger" in setup) or the
+  daily refresh silently stops happening on time again.
 - **`output_config.effort` is not supported on Haiku 4.5** (or Sonnet 4.5) — sending it makes
   every `callClaude()` call fail with an error. This isn't obvious from the error alone: because
   `fetch-news.mjs` isolates per-company failures, the symptom looks like "only companies with no

@@ -1,9 +1,12 @@
 name: Watchlist daily fetch
 
 on:
-  schedule:
-    # 03:25 UTC = 08:55 IST
-    - cron: "25 3 * * *"
+  # No `schedule:` trigger here on purpose: GitHub Actions' own cron scheduler
+  # was firing this 10-11+ hours late and drifting later each day (see
+  # "Daily trigger" in README). A Vercel Cron Job now calls the
+  # `refresh-news` Edge Function on schedule, which dispatches this workflow
+  # via `workflow_dispatch` below — same mechanism as the dashboard's
+  # "Refresh news" button, just on a timer instead of a click.
   workflow_dispatch: {}
 
 permissions:
