@@ -22,14 +22,28 @@ export function daysAgo(n) {
   return istDateString(d);
 }
 
+// Real headlines rarely spell out a company's full legal name - they drop
+// suffixes ("Ltd"/"Limited") and write "&" instead of "and" (e.g. "Godawari
+// Power and Ispat" is actually reported as "Godawari Power & Ispat"). Strip
+// both before comparing so genuine coverage isn't filtered out.
+function normalizeCompanyText(str) {
+  return str
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\./g, "")
+    .replace(/\b(limited|ltd|corp|corporation|inc|plc|co)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function relevantArticles(companyName, rawResults, seen) {
-  const nameLower = companyName.toLowerCase();
+  const nameLower = normalizeCompanyText(companyName);
   const articles = [];
   for (const a of rawResults) {
     if (seen.has(a.title)) continue;
     const mentionsCompany =
-      a.title?.toLowerCase().includes(nameLower) ||
-      a.description?.toLowerCase().includes(nameLower);
+      normalizeCompanyText(a.title ?? "").includes(nameLower) ||
+      normalizeCompanyText(a.description ?? "").includes(nameLower);
     if (!mentionsCompany) continue;
     seen.add(a.title);
     articles.push({
