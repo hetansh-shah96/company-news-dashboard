@@ -64,7 +64,6 @@ export async function fetchArticles(companyName, query) {
   url.searchParams.set("q", query);
   url.searchParams.set("country", "in");
   url.searchParams.set("language", "en");
-  url.searchParams.set("category", "business");
 
   const res = await fetch(url);
   if (!res.ok) throw new Error(`NewsData.io error ${res.status}: ${await res.text()}`);
@@ -87,7 +86,6 @@ export async function fetchArticlesMultiPage(companyName, query, maxPages = 4) {
     url.searchParams.set("q", query);
     url.searchParams.set("country", "in");
     url.searchParams.set("language", "en");
-    url.searchParams.set("category", "business");
     if (page) url.searchParams.set("page", page);
 
     const res = await fetch(url);
