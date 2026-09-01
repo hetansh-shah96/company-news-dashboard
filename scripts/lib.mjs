@@ -57,8 +57,7 @@ function relevantArticles(companyName, rawResults, seen) {
   return articles;
 }
 
-// Single-page fetch used by the daily job: today's news only, capped at 6.
-export async function fetchArticles(companyName, query) {
+async function fetchNewsDataRaw(query) {
   const url = new URL("https://newsdata.io/api/1/news");
   url.searchParams.set("apikey", requireEnv("NEWSDATA_API_KEY"));
   url.searchParams.set("q", query);
@@ -66,10 +65,73 @@ export async function fetchArticles(companyName, query) {
   url.searchParams.set("language", "en");
 
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`NewsData.io error ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    console.log(`  [warn] NewsData.io failed for "${query}": ${res.status}`);
+    return [];
+  }
   const data = await res.json();
+  return data.results ?? [];
+}
 
-  return relevantArticles(companyName, data.results ?? [], new Set()).slice(0, 6);
+function decodeXmlEntities(str) {
+  return str
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+// NewsData.io's free tier has thin, inconsistent coverage of Indian
+// small/mid-cap stocks (confirmed: it silently returns zero results, no
+// error, for companies that do have real same-day coverage). Google News'
+// public RSS search has no API key/quota and much broader indexing - some
+// of NewsData's own results are themselves sourced from it. Used as a
+// second source merged in below, not a replacement, since NewsData still
+// carries fuller descriptions/snippets when it does have a hit.
+async function fetchGoogleNewsRaw(query) {
+  try {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(
+      `${query} when:2d`
+    )}&hl=en-IN&gl=IN&ceid=IN:en`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.log(`  [warn] Google News RSS failed for "${query}": ${res.status}`);
+      return [];
+    }
+    const xml = await res.text();
+    const items = xml.split("<item>").slice(1);
+    const results = [];
+    for (const raw of items) {
+      const title = decodeXmlEntities((raw.match(/<title>([\s\S]*?)<\/title>/) ?? [])[1] ?? "");
+      const link = (raw.match(/<link>([\s\S]*?)<\/link>/) ?? [])[1] ?? "";
+      const pubDate = (raw.match(/<pubDate>([\s\S]*?)<\/pubDate>/) ?? [])[1] ?? "";
+      const source = decodeXmlEntities(
+        (raw.match(/<source[^>]*>([\s\S]*?)<\/source>/) ?? [])[1] ?? "Google News"
+      );
+      if (!title) continue;
+      results.push({ title, description: "", link, source_id: source, pubDate });
+    }
+    return results;
+  } catch (err) {
+    console.log(`  [warn] Google News RSS errored for "${query}": ${err.message}`);
+    return [];
+  }
+}
+
+// Single-page fetch used by the daily job: today's news only, capped at 6.
+// Merges NewsData.io with Google News RSS (see fetchGoogleNewsRaw) since
+// NewsData alone misses genuine coverage for smaller companies.
+export async function fetchArticles(companyName, query) {
+  const [newsDataResults, googleResults] = await Promise.all([
+    fetchNewsDataRaw(query),
+    fetchGoogleNewsRaw(query),
+  ]);
+
+  return relevantArticles(companyName, [...newsDataResults, ...googleResults], new Set()).slice(
+    0,
+    6
+  );
 }
 
 // Multi-page fetch used by the backfill: pages through NewsData.io's
