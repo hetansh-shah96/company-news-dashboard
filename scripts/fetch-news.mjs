@@ -69,6 +69,7 @@ async function main() {
             sources: articles,
             chatter_summary: chatterSummary,
             chatter_sources: chatterPosts,
+            updated_at: new Date().toISOString(),
           },
           { onConflict: "company_id,run_date" }
         );

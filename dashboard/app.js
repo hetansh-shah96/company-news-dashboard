@@ -316,7 +316,7 @@ async function load() {
 
   const { data: summaries, error: summariesError } = await client
     .from("news_summaries")
-    .select("company_id, run_date, summary, sources, chatter_summary, chatter_sources, created_at")
+    .select("company_id, run_date, summary, sources, chatter_summary, chatter_sources, updated_at")
     .order("run_date", { ascending: false })
     .limit(200);
 
@@ -326,11 +326,11 @@ async function load() {
   }
 
   if (summaries.length) {
-    const latestCreatedAt = summaries.reduce(
-      (max, row) => Math.max(max, new Date(row.created_at).getTime()),
+    const latestUpdatedAt = summaries.reduce(
+      (max, row) => Math.max(max, new Date(row.updated_at).getTime()),
       0
     );
-    lastRefreshedEl.textContent = `Last refreshed: ${formatRelativeTime(new Date(latestCreatedAt))}`;
+    lastRefreshedEl.textContent = `Last refreshed: ${formatRelativeTime(new Date(latestUpdatedAt))}`;
   }
 
   loadedCompanies = companies;

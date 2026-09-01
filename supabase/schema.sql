@@ -27,6 +27,13 @@ create table if not exists news_summaries (
 alter table news_summaries add column if not exists chatter_summary text;
 alter table news_summaries add column if not exists chatter_sources jsonb not null default '[]';
 
+-- created_at only reflects the row's first insert, so it doesn't move when
+-- a same-day "Refresh news" upserts new content over an existing row.
+-- updated_at is explicitly bumped by the fetch script on every write (see
+-- fetch-news.mjs) and is what the dashboard's "Last refreshed" label uses.
+alter table news_summaries add column if not exists updated_at timestamptz not null default now();
+update news_summaries set updated_at = created_at where updated_at is null;
+
 alter table companies enable row level security;
 alter table news_summaries enable row level security;
 
